@@ -4,11 +4,26 @@
 
 {% block head %}
 <style>
-#nav-camera-tab, #nav-image-tab, #nav-processing-tab, #nav-location-tab, #nav-admin-tab, #nav-filetransfer-tab, #nav-s3-tab, #nav-syncapi-tab, #nav-youtube-tab {
+#nav-camera-tab, #nav-image-tab, #nav-processing-tab, #nav-location-tab, #nav-admin-tab, #nav-filetransfer-tab, #nav-s3-tab, #nav-syncapi-tab, #nav-youtube-tab, #nav-mqtt-tab, #nav-devices-tab, #nav-sensors-tab {
 	width: 150px;
 	margin-top: 10px;
 	margin-right: 5px;
 	height: 50px;
+}
+
+.loader {
+  display: none;
+  border: 3px solid #f3f3f3;
+  border-top: 4px solid #3498db;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 </style>
 {% endblock %}
@@ -24,9 +39,12 @@
     <button class="nav-link link-info bg-dark" id="nav-location-tab" data-bs-toggle="tab" data-bs-target="#nav-location" type="button" role="tab" aria-controls="nav-location" aria-selected="false">Location</button>
     <button class="nav-link link-warning bg-dark" id="nav-admin-tab" data-bs-toggle="tab" data-bs-target="#nav-admin" type="button" role="tab" aria-controls="nav-admin" aria-selected="false">Admin</button>
     <button class="nav-link link-primary bg-dark" id="nav-filetransfer-tab" data-bs-toggle="tab" data-bs-target="#nav-filetransfer" type="button" role="tab" aria-controls="nav-filetransfer" aria-selected="false">File Transfer</button>
+    <button class="nav-link link-info bg-dark" id="nav-mqtt-tab" data-bs-toggle="tab" data-bs-target="#nav-mqtt" type="button" role="tab" aria-controls="nav-mqtt" aria-selected="false">MQTT</button>
     <button class="nav-link link-danger bg-dark" id="nav-youtube-tab" data-bs-toggle="tab" data-bs-target="#nav-youtube" type="button" role="tab" aria-controls="nav-youtube" aria-selected="false">YouTube</button>
     <button class="nav-link link-secondary bg-dark" id="nav-s3-tab" data-bs-toggle="tab" data-bs-target="#nav-s3" type="button" role="tab" aria-controls="nav-s3" aria-selected="false">Object Storage</button>
     <button class="nav-link link-light bg-dark" id="nav-syncapi-tab" data-bs-toggle="tab" data-bs-target="#nav-syncapi" type="button" role="tab" aria-controls="nav-syncapi" aria-selected="false">SyncAPI</button>
+    <button class="nav-link link-primary bg-dark" id="nav-sensors-tab" data-bs-toggle="tab" data-bs-target="#nav-sensors" type="button" role="tab" aria-controls="nav-sensors" aria-selected="false">Sensors</button>
+    <button class="nav-link link-danger bg-dark" id="nav-devices-tab" data-bs-toggle="tab" data-bs-target="#nav-devices" type="button" role="tab" aria-controls="nav-devices" aria-selected="false">Devices</button>
   </div>
 </nav>
 
@@ -81,7 +99,10 @@
             {{ form_config.INDI_CAMERA_NAME(class='form-control bg-secondary') }}
             <div id="INDI_CAMERA_NAME-error" class="invalid-feedback text-danger" style="display: none;"></div>
         </div>
-        <div class="col-sm-7">Leave blank to select first detected camera</div>
+        <div class="col-sm-7">
+            <div>Leave blank to select first detected camera</div>
+            <div><span class="badge rounded-pill bg-warning text-dark">Warning</span> Do not use this field unless you know what you are doing</div>
+        </div>
     </div>
 
     <hr>
@@ -359,7 +380,18 @@
             {{ form_config.TEMP_DISPLAY(class='form-select bg-secondary') }}
             <div id="TEMP_DISPLAY-error" class="invalid-feedback text-danger" style="display: none;"></div>
         </div>
-        <div class="col-sm-8">Temperature system for display</div>
+        <div class="col-sm-8">Temperature units for display</div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.PRESSURE_DISPLAY.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-2">
+            {{ form_config.PRESSURE_DISPLAY(class='form-select bg-secondary') }}
+            <div id="PRESSURE_DISPLAY-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-8">Pressure units for display</div>
     </div>
 
     <div class="form-group row">
@@ -376,6 +408,19 @@
     </div>
 
     <hr>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.LIBCAMERA__CAMERA_ID.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-2">
+            {{ form_config.LIBCAMERA__CAMERA_ID(class='form-select bg-secondary') }}
+            <div id="LIBCAMERA__CAMERA_ID-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-8">
+            <div>Select the correct CSI port on your system</div>
+        </div>
+    </div>
 
     <div class="form-group row">
         <div class="col-sm-2">
@@ -489,6 +534,18 @@
 
     <div class="form-group row">
         <div class="col-sm-2">
+            {{ form_config.PYCURL_CAMERA__IMAGE_FILE_TYPE.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-2">
+            {{ form_config.PYCURL_CAMERA__IMAGE_FILE_TYPE(class='form-select bg-secondary') }}
+            <div id="PYCURL_CAMERA__IMAGE_FILE_TYPE-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-8">
+        </div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
             {{ form_config.PYCURL_CAMERA__USERNAME.label(class='col-form-label') }}
         </div>
         <div class="col-sm-4">
@@ -561,6 +618,8 @@
         <div class="col-sm-8">Enable timelapse, keogram, and star trail creation</div>
     </div>
 
+    <hr>
+
     <div class="form-group row">
         <div class="col-sm-2">
             {{ form_config.DAYTIME_CAPTURE.label }}
@@ -603,6 +662,21 @@
             </div>
         </div>
         <div class="col-sm-8">Automatically generate thumbnails for individual sub images.  Thumbnails are always generated for keograms and startrails.</div>
+    </div>
+
+    <hr>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.IMAGE_CALIBRATE_DARK.label }}
+        </div>
+        <div class="col-sm-2">
+            <div class="form-switch">
+                {{ form_config.IMAGE_CALIBRATE_DARK(class='form-check-input') }}
+                <div id="IMAGE_CALIBRATE_DARK-error" class="invalid-feedback text-danger" style="display: none;"></div>
+            </div>
+        </div>
+        <div class="col-sm-8">Disable if you want to include hot pixels your final image</div>
     </div>
 
     <hr>
@@ -1162,6 +1236,31 @@
         <div class="col-sm-8">ffmpeg output codec</div>
     </div>
 
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.FFMPEG_EXTRA_OPTIONS.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-4">
+            {{ form_config.FFMPEG_EXTRA_OPTIONS(class='form-control bg-secondary') }}
+            <div id="FFMPEG_EXTRA_OPTIONS-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-6">
+            <div>ffmpeg extra options (not validated).</div>
+            <div>Example:<pre>-level 3.1</pre></div>
+        </div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.TIMELAPSE_SKIP_FRAMES.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-2">
+            {{ form_config.TIMELAPSE_SKIP_FRAMES(class='form-select bg-secondary') }}
+            <div id="TIMELAPSE_SKIP_FRAMES-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-8">Exclude frames at beginning of timelapse.  Gain changes between night and day cause bad exposures.</div>
+    </div>
+
     <hr>
 
     <div class="form-group row">
@@ -1575,6 +1674,32 @@
 
     <div class="form-group row">
         <div class="col-sm-2">
+            {{ form_config.ORB_PROPERTIES__AZ_OFFSET.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-2">
+            {{ form_config.ORB_PROPERTIES__AZ_OFFSET(class='form-control bg-secondary') }}
+            <div id="ORB_PROPERTIES__AZ_OFFSET-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-8"></div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.ORB_PROPERTIES__RETROGRADE.label }}
+        </div>
+        <div class="col-sm-2">
+            <div class="form-switch">
+                {{ form_config.ORB_PROPERTIES__RETROGRADE(class='form-check-input') }}
+                <div id="ORB_PROPERTIES__RETROGRADE-error" class="invalid-feedback text-danger" style="display: none;"></div>
+            </div>
+        </div>
+        <div class="col-sm-8">
+            <div><span class="badge rounded-pill bg-info text-dark">Note</span> Reversing the direction also flips the orbs position horizontally</div>
+        </div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
             {{ form_config.ORB_PROPERTIES__SUN_COLOR.label(class='col-form-label') }}
         </div>
         <div class="col-sm-2">
@@ -1658,6 +1783,19 @@
             </div>
         </div>
         <div class="col-sm-8">Enable saving raw FITS (non-stacked) data</div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.IMAGE_SAVE_FITS_PRE_DARK.label }}
+        </div>
+        <div class="col-sm-2">
+            <div class="form-switch">
+                {{ form_config.IMAGE_SAVE_FITS_PRE_DARK(class='form-check-input') }}
+                <div id="IMAGE_SAVE_FITS_PRE_DARK-error" class="invalid-feedback text-danger" style="display: none;"></div>
+            </div>
+        </div>
+        <div class="col-sm-8">Save FITS files before subtracting dark calibration</div>
     </div>
 
     <div class="form-group row">
@@ -2353,7 +2491,22 @@
         </div>
         <div class="col-sm-8">
             <div>Min: -180, Max: 180 - Image rotation for panorama</div>
+            <div><span class="badge rounded-pill bg-info text-dark">Note</span> The starting point of the panorama is 90 degrees clockwise</div>
+            <div>-90 will make the bottom of the image the center of the panorama</div>
         </div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.FISH2PANO__FLIP_H.label }}
+        </div>
+        <div class="col-sm-2">
+            <div class="form-switch">
+                {{ form_config.FISH2PANO__FLIP_H(class='form-check-input') }}
+                <div id="FISH2PANO__FLIP_H-error" class="invalid-feedback text-danger" style="display: none;"></div>
+            </div>
+        </div>
+        <div class="col-sm-8"></div>
     </div>
 
     <div class="form-group row">
@@ -2380,6 +2533,59 @@
         <div class="col-sm-8">
             <div>Generate panorama every # images</div>
             <div>The conversion process can be slow.  Ensure your system is fast enough if you lower this number.</div>
+        </div>
+    </div>
+
+    <hr>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.FISH2PANO__ENABLE_CARDINAL_DIRS.label }}
+        </div>
+        <div class="col-sm-2">
+            <div class="form-switch">
+                {{ form_config.FISH2PANO__ENABLE_CARDINAL_DIRS(class='form-check-input') }}
+                <div id="FISH2PANO__ENABLE_CARDINAL_DIRS-error" class="invalid-feedback text-danger" style="display: none;"></div>
+            </div>
+        </div>
+        <div class="col-sm-8">
+            <div><span class="badge rounded-pill bg-info text-dark">Note</span> Disabling Cardinal Directions (Image Tab) will also disable here</div>
+        </div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.FISH2PANO__DIRS_OFFSET_BOTTOM.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-2">
+            {{ form_config.FISH2PANO__DIRS_OFFSET_BOTTOM(class='form-control bg-secondary') }}
+            <div id="FISH2PANO__DIRS_OFFSET_BOTTOM-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-8">
+        </div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.FISH2PANO__OPENCV_FONT_SCALE.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-2">
+            {{ form_config.FISH2PANO__OPENCV_FONT_SCALE(class='form-control bg-secondary') }}
+            <div id="FISH2PANO__OPENCV_FONT_SCALE-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-8">
+        </div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.FISH2PANO__PIL_FONT_SIZE.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-2">
+            {{ form_config.FISH2PANO__PIL_FONT_SIZE(class='form-control bg-secondary') }}
+            <div id="FISH2PANO__PIL_FONT_SIZE-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-8">
         </div>
     </div>
 
@@ -2651,6 +2857,57 @@
 
     <div class="form-group row">
         <div class="col-sm-2">
+            {{ form_config.CHARTS__CUSTOM_SLOT_1.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-4">
+            {{ form_config.CHARTS__CUSTOM_SLOT_1(class='form-select bg-secondary') }}
+            <div id="CHARTS__CUSTOM_SLOT_1-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-6">
+            <div>Slot to chart on charts view</div>
+        </div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.CHARTS__CUSTOM_SLOT_2.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-4">
+            {{ form_config.CHARTS__CUSTOM_SLOT_2(class='form-select bg-secondary') }}
+            <div id="CHARTS__CUSTOM_SLOT_2-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-6">
+        </div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.CHARTS__CUSTOM_SLOT_3.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-4">
+            {{ form_config.CHARTS__CUSTOM_SLOT_3(class='form-select bg-secondary') }}
+            <div id="CHARTS__CUSTOM_SLOT_3-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-6">
+        </div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.CHARTS__CUSTOM_SLOT_4.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-4">
+            {{ form_config.CHARTS__CUSTOM_SLOT_4(class='form-select bg-secondary') }}
+            <div id="CHARTS__CUSTOM_SLOT_4-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-6">
+        </div>
+    </div>
+
+    <hr>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
             {{ form_config.WEB_NONLOCAL_IMAGES.label }}
         </div>
         <div class="col-sm-2">
@@ -2676,6 +2933,34 @@
             </div>
         </div>
         <div class="col-sm-8">Serve images/videos locally when coming from an admin network</div>
+    </div>
+
+    <hr>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.HEALTHCHECK__DISK_USAGE.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-2">
+            {{ form_config.HEALTHCHECK__DISK_USAGE(class='form-control bg-secondary') }}
+            <div id="HEALTHCHECK__DISK_USAGE-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-8">
+            <div>Percentage disk usage to issue a warning</div>
+        </div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.HEALTHCHECK__SWAP_USAGE.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-2">
+            {{ form_config.HEALTHCHECK__SWAP_USAGE(class='form-control bg-secondary') }}
+            <div id="HEALTHCHECK__SWAP_USAGE-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-8">
+            <div>Percentage swap usage to issue a warning</div>
+        </div>
     </div>
 
     <hr>
@@ -2934,6 +3219,30 @@
 
     <div class="form-group row">
         <div class="col-sm-2">
+            {{ form_config.FILETRANSFER__REMOTE_RAW_FOLDER.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-4">
+            {{ form_config.FILETRANSFER__REMOTE_RAW_FOLDER(class='form-control bg-secondary') }}
+            <div id="FILETRANSFER__REMOTE_RAW_FOLDER-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-6">Remote folder to store RAW images</div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.FILETRANSFER__REMOTE_FITS_FOLDER.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-4">
+            {{ form_config.FILETRANSFER__REMOTE_FITS_FOLDER(class='form-control bg-secondary') }}
+            <div id="FILETRANSFER__REMOTE_FITS_FOLDER-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-6">Remote folder to store FITS images</div>
+    </div>
+
+    <hr>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
             {{ form_config.FILETRANSFER__REMOTE_VIDEO_FOLDER.label(class='col-form-label') }}
         </div>
         <div class="col-sm-4">
@@ -3037,6 +3346,32 @@
 
     <div class="form-group row">
         <div class="col-sm-2">
+            {{ form_config.FILETRANSFER__UPLOAD_RAW.label }}
+        </div>
+        <div class="col-sm-2">
+            <div class="form-switch">
+                {{ form_config.FILETRANSFER__UPLOAD_RAW(class='form-check-input') }}
+                <div id="FILETRANSFER__UPLOAD_RAW-error" class="invalid-feedback text-danger" style="display: none;"></div>
+            </div>
+        </div>
+        <div class="col-sm-8">Enable RAW uploads</div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.FILETRANSFER__UPLOAD_FITS.label }}
+        </div>
+        <div class="col-sm-2">
+            <div class="form-switch">
+                {{ form_config.FILETRANSFER__UPLOAD_FITS(class='form-check-input') }}
+                <div id="FILETRANSFER__UPLOAD_FITS-error" class="invalid-feedback text-danger" style="display: none;"></div>
+            </div>
+        </div>
+        <div class="col-sm-8">Enable FITS uploads</div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
             {{ form_config.FILETRANSFER__UPLOAD_VIDEO.label }}
         </div>
         <div class="col-sm-2">
@@ -3112,6 +3447,9 @@
         </div>
         <div class="col-sm-8">Enable Allsky EndOfNight uploads</div>
     </div>
+
+</div><!-- end filetransfer tab -->
+<div class="tab-pane fade" id="nav-mqtt" role="tabpanel" aria-labelledby="nav-mqtt-tab">
 
     <hr>
 
@@ -3229,6 +3567,21 @@
             </div>
         </div>
         <div class="col-sm-8">Bypass certificate validation</div>
+    </div>
+
+    <hr>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.MQTTPUBLISH__PUBLISH_IMAGE.label }}
+        </div>
+        <div class="col-sm-2">
+            <div class="form-switch">
+                {{ form_config.MQTTPUBLISH__PUBLISH_IMAGE(class='form-check-input') }}
+                <div id="MQTTPUBLISH__PUBLISH_IMAGE-error" class="invalid-feedback text-danger" style="display: none;"></div>
+            </div>
+        </div>
+        <div class="col-sm-8"></div>
     </div>
 
 </div><!-- end filetransfer tab -->
@@ -3876,6 +4229,921 @@
     </div>
 
 </div><!-- end syncapi tab -->
+
+<div class="tab-pane fade" id="nav-sensors" role="tabpanel" aria-labelledby="nav-sensors-tab">
+    <hr>
+
+    <div><span class="badge rounded-pill bg-info text-dark">Note</span> Hardware Device support requires the Adafruit-Blinka module</div>
+
+    <hr>
+
+    <div><span class="badge rounded-pill bg-info text-dark">Note</span> Additional graphs may be configured for sensor values on the Admin Tab</div>
+
+    <hr>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.TEMP_SENSOR__A_CLASSNAME.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-4">
+            {{ form_config.TEMP_SENSOR__A_CLASSNAME(class='form-select bg-secondary') }}
+            <div id="TEMP_SENSOR__A_CLASSNAME-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-6">
+            <div><a href="https://github.com/aaronwmorris/indi-allsky/wiki/Sensors" class="text-decoration-none link-info" target="_blank">Sensor Wiki</a></div>
+        </div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.TEMP_SENSOR__A_LABEL.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-2">
+            {{ form_config.TEMP_SENSOR__A_LABEL(class='form-control bg-secondary') }}
+            <div id="TEMP_SENSOR__A_LABEL-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-8">
+        </div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.TEMP_SENSOR__A_PIN_1.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-2">
+            {{ form_config.TEMP_SENSOR__A_PIN_1(class='form-control bg-secondary') }}
+            <div id="TEMP_SENSOR__A_PIN_1-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-8">
+            <div>Example: D5 (GPIO5 / Pin 29 Raspi)</div>
+            <div>Example: P0 - Pin for ADS1x15 ADC</div>
+            <div>Unused for most i2c devices</div>
+        </div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.TEMP_SENSOR__A_I2C_ADDRESS.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-2">
+            {{ form_config.TEMP_SENSOR__A_I2C_ADDRESS(class='form-control bg-secondary') }}
+            <div id="TEMP_SENSOR__A_I2C_ADDRESS-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-8">
+            <div>Hexidecimal address - Example: 0x77</div>
+        </div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.TEMP_SENSOR__A_USER_VAR_SLOT.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-2">
+            {{ form_config.TEMP_SENSOR__A_USER_VAR_SLOT(class='form-select bg-secondary') }}
+            <div id="TEMP_SENSOR__A_USER_VAR_SLOT-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-8">
+        </div>
+    </div>
+
+    <hr>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.TEMP_SENSOR__B_CLASSNAME.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-4">
+            {{ form_config.TEMP_SENSOR__B_CLASSNAME(class='form-select bg-secondary') }}
+            <div id="TEMP_SENSOR__B_CLASSNAME-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-6">
+            <div></div>
+        </div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.TEMP_SENSOR__B_LABEL.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-2">
+            {{ form_config.TEMP_SENSOR__B_LABEL(class='form-control bg-secondary') }}
+            <div id="TEMP_SENSOR__B_LABEL-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-8">
+        </div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.TEMP_SENSOR__B_PIN_1.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-2">
+            {{ form_config.TEMP_SENSOR__B_PIN_1(class='form-control bg-secondary') }}
+            <div id="TEMP_SENSOR__B_PIN_1-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-8">
+            <div>Example: D6 (GPIO6 / Pin 31 Raspi)</div>
+            <div>Example: P0 - Pin for ADS1x15 ADC</div>
+            <div>Unused for most i2c devices</div>
+        </div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.TEMP_SENSOR__B_I2C_ADDRESS.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-2">
+            {{ form_config.TEMP_SENSOR__B_I2C_ADDRESS(class='form-control bg-secondary') }}
+            <div id="TEMP_SENSOR__B_I2C_ADDRESS-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-8">
+            <div>Hexidecimal address - Example: 0x76</div>
+        </div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.TEMP_SENSOR__B_USER_VAR_SLOT.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-2">
+            {{ form_config.TEMP_SENSOR__B_USER_VAR_SLOT(class='form-select bg-secondary') }}
+            <div id="TEMP_SENSOR__B_USER_VAR_SLOT-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-8">
+        </div>
+    </div>
+
+    <hr>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.TEMP_SENSOR__C_CLASSNAME.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-4">
+            {{ form_config.TEMP_SENSOR__C_CLASSNAME(class='form-select bg-secondary') }}
+            <div id="TEMP_SENSOR__C_CLASSNAME-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-6">
+            <div></div>
+        </div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.TEMP_SENSOR__C_LABEL.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-2">
+            {{ form_config.TEMP_SENSOR__C_LABEL(class='form-control bg-secondary') }}
+            <div id="TEMP_SENSOR__C_LABEL-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-8">
+        </div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.TEMP_SENSOR__C_PIN_1.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-2">
+            {{ form_config.TEMP_SENSOR__C_PIN_1(class='form-control bg-secondary') }}
+            <div id="TEMP_SENSOR__C_PIN_1-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-8">
+            <div>Example: D16 (GPIO16 / Pin 36 Raspi)</div>
+            <div>Example: P0 - Pin for ADS1x15 ADC</div>
+            <div>Unused for most i2c devices</div>
+        </div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.TEMP_SENSOR__C_I2C_ADDRESS.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-2">
+            {{ form_config.TEMP_SENSOR__C_I2C_ADDRESS(class='form-control bg-secondary') }}
+            <div id="TEMP_SENSOR__C_I2C_ADDRESS-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-8">
+            <div>Hexidecimal address - Example: 0x40</div>
+        </div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.TEMP_SENSOR__C_USER_VAR_SLOT.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-2">
+            {{ form_config.TEMP_SENSOR__C_USER_VAR_SLOT(class='form-select bg-secondary') }}
+            <div id="TEMP_SENSOR__C_USER_VAR_SLOT-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-8">
+        </div>
+    </div>
+
+    <hr>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.TEMP_SENSOR__OPENWEATHERMAP_APIKEY.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-4">
+            {{ form_config.TEMP_SENSOR__OPENWEATHERMAP_APIKEY(class='form-control bg-secondary') }}
+            <div id="TEMP_SENSOR__OPENWEATHERMAP_APIKEY-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-6">
+            <div></div>
+        </div>
+    </div>
+
+    <hr>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.TEMP_SENSOR__TSL2561_GAIN_NIGHT.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-4">
+            {{ form_config.TEMP_SENSOR__TSL2561_GAIN_NIGHT(class='form-select bg-secondary') }}
+            <div id="TEMP_SENSOR__TSL2561_GAIN_NIGHT-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-6">
+            <div></div>
+        </div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.TEMP_SENSOR__TSL2561_GAIN_DAY.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-4">
+            {{ form_config.TEMP_SENSOR__TSL2561_GAIN_DAY(class='form-select bg-secondary') }}
+            <div id="TEMP_SENSOR__TSL2561_GAIN_DAY-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-6">
+            <div></div>
+        </div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.TEMP_SENSOR__TSL2561_INT_NIGHT.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-4">
+            {{ form_config.TEMP_SENSOR__TSL2561_INT_NIGHT(class='form-select bg-secondary') }}
+            <div id="TEMP_SENSOR__TSL2561_INT_NIGHT-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-6">
+            <div></div>
+        </div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.TEMP_SENSOR__TSL2561_INT_DAY.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-4">
+            {{ form_config.TEMP_SENSOR__TSL2561_INT_DAY(class='form-select bg-secondary') }}
+            <div id="TEMP_SENSOR__TSL2561_INT_DAY-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-6">
+            <div></div>
+        </div>
+    </div>
+
+    <hr>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.TEMP_SENSOR__TSL2591_GAIN_NIGHT.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-4">
+            {{ form_config.TEMP_SENSOR__TSL2591_GAIN_NIGHT(class='form-select bg-secondary') }}
+            <div id="TEMP_SENSOR__TSL2591_GAIN_NIGHT-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-6">
+            <div></div>
+        </div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.TEMP_SENSOR__TSL2591_GAIN_DAY.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-4">
+            {{ form_config.TEMP_SENSOR__TSL2591_GAIN_DAY(class='form-select bg-secondary') }}
+            <div id="TEMP_SENSOR__TSL2591_GAIN_DAY-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-6">
+            <div></div>
+        </div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.TEMP_SENSOR__TSL2591_INT_NIGHT.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-4">
+            {{ form_config.TEMP_SENSOR__TSL2591_INT_NIGHT(class='form-select bg-secondary') }}
+            <div id="TEMP_SENSOR__TSL2591_INT_NIGHT-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-6">
+            <div></div>
+        </div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.TEMP_SENSOR__TSL2591_INT_DAY.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-4">
+            {{ form_config.TEMP_SENSOR__TSL2591_INT_DAY(class='form-select bg-secondary') }}
+            <div id="TEMP_SENSOR__TSL2591_INT_DAY-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-6">
+            <div></div>
+        </div>
+    </div>
+
+    <hr>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.TEMP_SENSOR__MQTT_HOST.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-4">
+            {{ form_config.TEMP_SENSOR__MQTT_HOST(class='form-control bg-secondary') }}
+            <div id="TEMP_SENSOR__MQTT_HOST-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-6">MQTT hostname</div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.TEMP_SENSOR__MQTT_TRANSPORT.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-4">
+            {{ form_config.TEMP_SENSOR__MQTT_TRANSPORT(class='form-select bg-secondary') }}
+            <div id="TEMP_SENSOR__MQTT_TRANSPORT-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-6">MQTT Transport</div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.TEMP_SENSOR__MQTT_PORT.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-4">
+            {{ form_config.TEMP_SENSOR__MQTT_PORT(class='form-control bg-secondary') }}
+            <div id="TEMP_SENSOR__MQTT_PORT-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-6">MQTT port - 8883 = TLS, 1883 = standard</div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.TEMP_SENSOR__MQTT_USERNAME.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-4">
+            {{ form_config.TEMP_SENSOR__MQTT_USERNAME(class='form-control bg-secondary') }}
+            <div id="TEMP_SENSOR__MQTT_USERNAME-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-6">MQTT Username</div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.TEMP_SENSOR__MQTT_PASSWORD.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-4">
+            {{ form_config.TEMP_SENSOR__MQTT_PASSWORD(class='form-control bg-secondary') }}
+            <div id="TEMP_SENSOR__MQTT_PASSWORD-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-6">MQTT Password</div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.TEMP_SENSOR__MQTT_TLS.label }}
+        </div>
+        <div class="col-sm-2">
+            <div class="form-switch">
+                {{ form_config.TEMP_SENSOR__MQTT_TLS(class='form-check-input') }}
+                <div id="TEMP_SENSOR__MQTT_TLS-error" class="invalid-feedback text-danger" style="display: none;"></div>
+            </div>
+        </div>
+        <div class="col-sm-8">Use TLS/SSL for MQTT connections</div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.TEMP_SENSOR__MQTT_CERT_BYPASS.label }}
+        </div>
+        <div class="col-sm-2">
+            <div class="form-switch">
+                {{ form_config.TEMP_SENSOR__MQTT_CERT_BYPASS(class='form-check-input') }}
+                <div id="TEMP_SENSOR__MQTT_CERT_BYPASS-error" class="invalid-feedback text-danger" style="display: none;"></div>
+            </div>
+        </div>
+        <div class="col-sm-8">Bypass certificate validation</div>
+    </div>
+
+
+</div><!-- end sensors tab -->
+
+<div class="tab-pane fade" id="nav-devices" role="tabpanel" aria-labelledby="nav-devices-tab">
+    <hr>
+
+    <div><span class="badge rounded-pill bg-info text-dark">Note</span> Hardware Device support requires the Adafruit-Blinka module</div>
+
+    <hr>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.GENERIC_GPIO__A_CLASSNAME.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-4">
+            {{ form_config.GENERIC_GPIO__A_CLASSNAME(class='form-select bg-secondary') }}
+            <div id="GENERIC_GPIO__A_CLASSNAME-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-6">
+            <div>Activates a device/pin at night and off during day (or reversed)</div>
+        </div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.GENERIC_GPIO__A_PIN_1.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-2">
+            {{ form_config.GENERIC_GPIO__A_PIN_1(class='form-control bg-secondary') }}
+            <div id="GENERIC_GPIO__A_PIN_1-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-8">
+            <div>Example: D21 (GPIO21 / Pin 40 Raspi)</div>
+        </div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.GENERIC_GPIO__A_INVERT_OUTPUT.label }}
+        </div>
+        <div class="col-sm-2">
+            <div class="form-switch">
+                {{ form_config.GENERIC_GPIO__A_INVERT_OUTPUT(class='form-check-input') }}
+                <div id="GENERIC_GPIO__A_INVERT_OUTPUT-error" class="invalid-feedback text-danger" style="display: none;"></div>
+            </div>
+        </div>
+        <div class="col-sm-8">
+        </div>
+    </div>
+
+    <hr>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.DEW_HEATER__CLASSNAME.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-4">
+            {{ form_config.DEW_HEATER__CLASSNAME(class='form-select bg-secondary') }}
+            <div id="DEW_HEATER__CLASSNAME-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-6">
+            <div><a href="https://github.com/aaronwmorris/indi-allsky/wiki/Dew-Heater-Support" class="text-decoration-none link-info" target="_blank">Dew Heater Wiki</a></div>
+        </div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.DEW_HEATER__PIN_1.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-2">
+            {{ form_config.DEW_HEATER__PIN_1(class='form-control bg-secondary') }}
+            <div id="DEW_HEATER__PIN_1-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-8">
+            <div>Example: D13 (GPIO13 / Pin 33 Raspi)</div>
+        </div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.DEW_HEATER__INVERT_OUTPUT.label }}
+        </div>
+        <div class="col-sm-2">
+            <div class="form-switch">
+                {{ form_config.DEW_HEATER__INVERT_OUTPUT(class='form-check-input') }}
+                <div id="DEW_HEATER__INVERT_OUTPUT-error" class="invalid-feedback text-danger" style="display: none;"></div>
+            </div>
+        </div>
+        <div class="col-sm-8">
+        </div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.DEW_HEATER__LEVEL_DEF.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-2">
+            {{ form_config.DEW_HEATER__LEVEL_DEF(class='form-control bg-secondary') }}
+            <div id="DEW_HEATER__LEVEL_DEF-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-8">
+            <div>Default duty cycle of PWM</div>
+        </div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.DEW_HEATER__ENABLE_DAY.label }}
+        </div>
+        <div class="col-sm-2">
+            <div class="form-switch">
+                {{ form_config.DEW_HEATER__ENABLE_DAY(class='form-check-input') }}
+                <div id="DEW_HEATER__ENABLE_DAY-error" class="invalid-feedback text-danger" style="display: none;"></div>
+            </div>
+        </div>
+        <div class="col-sm-8">
+        </div>
+    </div>
+
+    <hr>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.DEW_HEATER__THOLD_ENABLE.label }}
+        </div>
+        <div class="col-sm-2">
+            <div class="form-switch">
+                {{ form_config.DEW_HEATER__THOLD_ENABLE(class='form-check-input') }}
+                <div id="DEW_HEATER__THOLD_ENABLE-error" class="invalid-feedback text-danger" style="display: none;"></div>
+            </div>
+        </div>
+        <div class="col-sm-8">
+        </div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.DEW_HEATER__TEMP_USER_VAR_SLOT.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-4">
+            {{ form_config.DEW_HEATER__TEMP_USER_VAR_SLOT(class='form-select bg-secondary') }}
+            <div id="DEW_HEATER__TEMP_USER_VAR_SLOT-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-6">
+            <div>This should be the slot containing the current temperature to be compared against the dew point (or manual target)</div>
+        </div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.DEW_HEATER__MANUAL_TARGET.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-2">
+            {{ form_config.DEW_HEATER__MANUAL_TARGET(class='form-control bg-secondary') }}
+            <div id="DEW_HEATER__MANUAL_TARGET-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-8">
+            <div>Manual target temperature if dew point calculations are not available.  0 = disabled</div>
+        </div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.DEW_HEATER__LEVEL_LOW.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-2">
+            {{ form_config.DEW_HEATER__LEVEL_LOW(class='form-control bg-secondary') }}
+            <div id="DEW_HEATER__LEVEL_LOW-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-8">
+            <div></div>
+        </div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.DEW_HEATER__LEVEL_MED.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-2">
+            {{ form_config.DEW_HEATER__LEVEL_MED(class='form-control bg-secondary') }}
+            <div id="DEW_HEATER__LEVEL_MED-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-8">
+            <div></div>
+        </div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.DEW_HEATER__LEVEL_HIGH.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-2">
+            {{ form_config.DEW_HEATER__LEVEL_HIGH(class='form-control bg-secondary') }}
+            <div id="DEW_HEATER__LEVEL_HIGH-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-8">
+            <div></div>
+        </div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.DEW_HEATER__THOLD_DIFF_LOW.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-2">
+            {{ form_config.DEW_HEATER__THOLD_DIFF_LOW(class='form-control bg-secondary') }}
+            <div id="DEW_HEATER__THOLD_DIFF_LOW-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-8">
+            <div>If the difference is above the LOW threshold, the default level is used</div>
+        </div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.DEW_HEATER__THOLD_DIFF_MED.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-2">
+            {{ form_config.DEW_HEATER__THOLD_DIFF_MED(class='form-control bg-secondary') }}
+            <div id="DEW_HEATER__THOLD_DIFF_MED-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-8">
+            <div></div>
+        </div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.DEW_HEATER__THOLD_DIFF_HIGH.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-2">
+            {{ form_config.DEW_HEATER__THOLD_DIFF_HIGH(class='form-control bg-secondary') }}
+            <div id="DEW_HEATER__THOLD_DIFF_HIGH-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-8">
+            <div></div>
+        </div>
+    </div>
+
+    <hr>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.FAN__CLASSNAME.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-4">
+            {{ form_config.FAN__CLASSNAME(class='form-select bg-secondary') }}
+            <div id="FAN__CLASSNAME-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-6">
+            <div><a href="https://github.com/aaronwmorris/indi-allsky/wiki/Fan-Control" class="text-decoration-none link-info" target="_blank">Fan Wiki</a></div>
+        </div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.FAN__PIN_1.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-2">
+            {{ form_config.FAN__PIN_1(class='form-control bg-secondary') }}
+            <div id="FAN__PIN_1-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-8">
+            <div>Example: D13 (GPIO13 / Pin 33 Raspi)</div>
+        </div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.FAN__INVERT_OUTPUT.label }}
+        </div>
+        <div class="col-sm-2">
+            <div class="form-switch">
+                {{ form_config.FAN__INVERT_OUTPUT(class='form-check-input') }}
+                <div id="FAN__INVERT_OUTPUT-error" class="invalid-feedback text-danger" style="display: none;"></div>
+            </div>
+        </div>
+        <div class="col-sm-8">
+        </div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.FAN__LEVEL_DEF.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-2">
+            {{ form_config.FAN__LEVEL_DEF(class='form-control bg-secondary') }}
+            <div id="FAN__LEVEL_DEF-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-8">
+            <div>Default duty cycle of PWM</div>
+        </div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.FAN__ENABLE_NIGHT.label }}
+        </div>
+        <div class="col-sm-2">
+            <div class="form-switch">
+                {{ form_config.FAN__ENABLE_NIGHT(class='form-check-input') }}
+                <div id="FAN__ENABLE_NIGHT-error" class="invalid-feedback text-danger" style="display: none;"></div>
+            </div>
+        </div>
+        <div class="col-sm-8">
+        </div>
+    </div>
+
+    <hr>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.FAN__THOLD_ENABLE.label }}
+        </div>
+        <div class="col-sm-2">
+            <div class="form-switch">
+                {{ form_config.FAN__THOLD_ENABLE(class='form-check-input') }}
+                <div id="FAN__THOLD_ENABLE-error" class="invalid-feedback text-danger" style="display: none;"></div>
+            </div>
+        </div>
+        <div class="col-sm-8">
+        </div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.FAN__TEMP_USER_VAR_SLOT.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-4">
+            {{ form_config.FAN__TEMP_USER_VAR_SLOT(class='form-select bg-secondary') }}
+            <div id="FAN__TEMP_USER_VAR_SLOT-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-6">
+            <div>This should be the slot containing the current temperature to be compared with the target temperature</div>
+        </div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.FAN__TARGET.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-2">
+            {{ form_config.FAN__TARGET(class='form-control bg-secondary') }}
+            <div id="FAN__TARGET-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-8">
+            <div>Target temperature</div>
+        </div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.FAN__LEVEL_LOW.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-2">
+            {{ form_config.FAN__LEVEL_LOW(class='form-control bg-secondary') }}
+            <div id="FAN__LEVEL_LOW-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-8">
+            <div></div>
+        </div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.FAN__LEVEL_MED.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-2">
+            {{ form_config.FAN__LEVEL_MED(class='form-control bg-secondary') }}
+            <div id="FAN__LEVEL_MED-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-8">
+            <div></div>
+        </div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.FAN__LEVEL_HIGH.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-2">
+            {{ form_config.FAN__LEVEL_HIGH(class='form-control bg-secondary') }}
+            <div id="FAN__LEVEL_HIGH-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-8">
+            <div></div>
+        </div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.FAN__THOLD_DIFF_LOW.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-2">
+            {{ form_config.FAN__THOLD_DIFF_LOW(class='form-control bg-secondary') }}
+            <div id="FAN__THOLD_DIFF_LOW-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-8">
+            <div>If the difference is below the LOW threshold, the default level is used</div>
+        </div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.FAN__THOLD_DIFF_MED.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-2">
+            {{ form_config.FAN__THOLD_DIFF_MED(class='form-control bg-secondary') }}
+            <div id="FAN__THOLD_DIFF_MED-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-8">
+            <div></div>
+        </div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.FAN__THOLD_DIFF_HIGH.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-2">
+            {{ form_config.FAN__THOLD_DIFF_HIGH(class='form-control bg-secondary') }}
+            <div id="FAN__THOLD_DIFF_HIGH-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-8">
+            <div></div>
+        </div>
+    </div>
+
+    <hr>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.FOCUSER__CLASSNAME.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-4">
+            {{ form_config.FOCUSER__CLASSNAME(class='form-select bg-secondary') }}
+            <div id="FOCUSER__CLASSNAME-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-6">
+            <div><a href="https://github.com/aaronwmorris/indi-allsky/wiki/Focuser-Device" class="text-decoration-none link-info" target="_blank">Focuser Wiki</a></div>
+        </div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.FOCUSER__GPIO_PIN_1.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-2">
+            {{ form_config.FOCUSER__GPIO_PIN_1(class='form-control bg-secondary') }}
+            <div id="FOCUSER__GPIO_PIN_1-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-8">
+            <div>Example: D17 (GPIO17 / Pin 11 Raspi)</div>
+        </div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.FOCUSER__GPIO_PIN_2.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-2">
+            {{ form_config.FOCUSER__GPIO_PIN_2(class='form-control bg-secondary') }}
+            <div id="FOCUSER__GPIO_PIN_2-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-8">
+            <div>Example: D18 (GPIO18 / Pin 12 Raspi)</div>
+        </div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.FOCUSER__GPIO_PIN_3.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-2">
+            {{ form_config.FOCUSER__GPIO_PIN_3(class='form-control bg-secondary') }}
+            <div id="FOCUSER__GPIO_PIN_3-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-8">
+            <div>Example: D27 (GPIO27 / Pin 13 Raspi)</div>
+        </div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.FOCUSER__GPIO_PIN_4.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-2">
+            {{ form_config.FOCUSER__GPIO_PIN_4(class='form-control bg-secondary') }}
+            <div id="FOCUSER__GPIO_PIN_4-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-8">
+            <div>Example: D22 (GPIO22 / Pin 15 Raspi)</div>
+        </div>
+    </div>
+
+
+</div><!-- end devices tab -->
+
 </div>
 
 
@@ -3885,13 +5153,15 @@
         <div class="col-sm-2">
             {{ form_config.RELOAD_ON_SAVE.label }}
         </div>
-        <div class="col-sm-2">
+        <div class="col-sm-1">
             <div class="form-switch">
                 {{ form_config.RELOAD_ON_SAVE(class='form-check-input') }}
                 <div id="RELOAD_ON_SAVE-error" class="invalid-feedback text-danger" style="display: none;"></div>
             </div>
         </div>
-        <div class="col-sm-8"></div>
+        <div class="col-sm-9">
+            <div><span class="badge rounded-pill bg-info text-dark">Note</span> A reload will restart the indi-allsky capture processes.  This requires 1-3 minutes to complete.</span>
+        </div>
     </div>
 
     <hr>
@@ -3911,6 +5181,7 @@
 
     <div class="form-group row" style="height:100px;">
         <div class="col-sm-8">
+            <div class="loader" id="loader_config"></div>
             <div id="success-message" class="text-success" style="display: none;"></div>
             <div id="failure-message" class="invalid-feedback text-danger" style="display: none;"></div>
         </div>
@@ -3957,6 +5228,7 @@ const field_names = [
     'SCNR_ALGORITHM',
     'CCD_TEMP',
     'TEMP_DISPLAY',
+    'PRESSURE_DISPLAY',
     'CCD_TEMP_SCRIPT',
     'TARGET_ADU',
     'TARGET_ADU_DAY',
@@ -3975,6 +5247,8 @@ const field_names = [
     'DETECT_STARS_THOLD',
     'DETECT_MASK',
     'LOGO_OVERLAY',
+    'HEALTHCHECK__DISK_USAGE',
+    'HEALTHCHECK__SWAP_USAGE',
     'LOCATION_NAME',
     'LOCATION_LATITUDE',
     'LOCATION_LONGITUDE',
@@ -3984,6 +5258,10 @@ const field_names = [
     'NIGHT_MOONMODE_PHASE',
     'WEB_STATUS_TEMPLATE',
     'WEB_EXTRA_TEXT',
+    'CHARTS__CUSTOM_SLOT_1',
+    'CHARTS__CUSTOM_SLOT_2',
+    'CHARTS__CUSTOM_SLOT_3',
+    'CHARTS__CUSTOM_SLOT_4',
     'CLAHE_CLIPLIMIT',
     'CLAHE_GRIDSIZE',
     'IMAGE_STRETCH__MODE1_GAMMA',
@@ -4026,6 +5304,9 @@ const field_names = [
     'FISH2PANO__ROTATE_ANGLE',
     'FISH2PANO__SCALE',
     'FISH2PANO__MODULUS',
+    'FISH2PANO__DIRS_OFFSET_BOTTOM',
+    'FISH2PANO__OPENCV_FONT_SCALE',
+    'FISH2PANO__PIL_FONT_SIZE',
     'IMAGE_EXPORT_RAW',
     'IMAGE_EXPORT_FOLDER',
     'IMAGE_STACK_METHOD',
@@ -4042,6 +5323,8 @@ const field_names = [
     'FFMPEG_BITRATE',
     'FFMPEG_VFSCALE',
     'FFMPEG_CODEC',
+    'FFMPEG_EXTRA_OPTIONS',
+    'TIMELAPSE_SKIP_FRAMES',
     'IMAGE_LABEL_SYSTEM',
     'TEXT_PROPERTIES__FONT_FACE',
     'TEXT_PROPERTIES__FONT_HEIGHT',
@@ -4071,6 +5354,7 @@ const field_names = [
     'ORB_PROPERTIES__RADIUS',
     'ORB_PROPERTIES__SUN_COLOR',
     'ORB_PROPERTIES__MOON_COLOR',
+    'ORB_PROPERTIES__AZ_OFFSET',
     'UPLOAD_WORKERS',
     'FILETRANSFER__CLASSNAME',
     'FILETRANSFER__HOST',
@@ -4088,6 +5372,8 @@ const field_names = [
     'FILETRANSFER__REMOTE_PANORAMA_VIDEO_FOLDER',
     'FILETRANSFER__REMOTE_METADATA_NAME',
     'FILETRANSFER__REMOTE_METADATA_FOLDER',
+    'FILETRANSFER__REMOTE_RAW_FOLDER',
+    'FILETRANSFER__REMOTE_FITS_FOLDER',
     'FILETRANSFER__REMOTE_VIDEO_FOLDER',
     'FILETRANSFER__REMOTE_KEOGRAM_FOLDER',
     'FILETRANSFER__REMOTE_STARTRAIL_FOLDER',
@@ -4142,14 +5428,74 @@ const field_names = [
     'FITSHEADERS__4__KEY',
     'FITSHEADERS__4__VAL',
     'ADMIN_NETWORKS_FLASK',
+    'LIBCAMERA__CAMERA_ID',
     'LIBCAMERA__IMAGE_FILE_TYPE',
     'LIBCAMERA__AWB',
     'LIBCAMERA__AWB_DAY',
     'LIBCAMERA__EXTRA_OPTIONS',
     'LIBCAMERA__EXTRA_OPTIONS_DAY',
     'PYCURL_CAMERA__URL',
+    'PYCURL_CAMERA__IMAGE_FILE_TYPE',
     'PYCURL_CAMERA__USERNAME',
     'PYCURL_CAMERA__PASSWORD',
+    'FOCUSER__CLASSNAME',
+    'FOCUSER__GPIO_PIN_1',
+    'FOCUSER__GPIO_PIN_2',
+    'FOCUSER__GPIO_PIN_3',
+    'FOCUSER__GPIO_PIN_4',
+    'DEW_HEATER__CLASSNAME',
+    'DEW_HEATER__PIN_1',
+    'DEW_HEATER__LEVEL_DEF',
+    'DEW_HEATER__MANUAL_TARGET',
+    'DEW_HEATER__TEMP_USER_VAR_SLOT',
+    'DEW_HEATER__LEVEL_LOW',
+    'DEW_HEATER__LEVEL_MED',
+    'DEW_HEATER__LEVEL_HIGH',
+    'DEW_HEATER__THOLD_DIFF_LOW',
+    'DEW_HEATER__THOLD_DIFF_MED',
+    'DEW_HEATER__THOLD_DIFF_HIGH',
+    'FAN__CLASSNAME',
+    'FAN__PIN_1',
+    'FAN__LEVEL_DEF',
+    'FAN__TARGET',
+    'FAN__TEMP_USER_VAR_SLOT',
+    'FAN__LEVEL_LOW',
+    'FAN__LEVEL_MED',
+    'FAN__LEVEL_HIGH',
+    'FAN__THOLD_DIFF_LOW',
+    'FAN__THOLD_DIFF_MED',
+    'FAN__THOLD_DIFF_HIGH',
+    'GENERIC_GPIO__A_CLASSNAME',
+    'GENERIC_GPIO__A_PIN_1',
+    'TEMP_SENSOR__A_CLASSNAME',
+    'TEMP_SENSOR__A_LABEL',
+    'TEMP_SENSOR__A_PIN_1',
+    'TEMP_SENSOR__A_USER_VAR_SLOT',
+    'TEMP_SENSOR__A_I2C_ADDRESS',
+    'TEMP_SENSOR__B_CLASSNAME',
+    'TEMP_SENSOR__B_LABEL',
+    'TEMP_SENSOR__B_PIN_1',
+    'TEMP_SENSOR__B_USER_VAR_SLOT',
+    'TEMP_SENSOR__B_I2C_ADDRESS',
+    'TEMP_SENSOR__C_CLASSNAME',
+    'TEMP_SENSOR__C_LABEL',
+    'TEMP_SENSOR__C_PIN_1',
+    'TEMP_SENSOR__C_USER_VAR_SLOT',
+    'TEMP_SENSOR__C_I2C_ADDRESS',
+    'TEMP_SENSOR__OPENWEATHERMAP_APIKEY',
+    'TEMP_SENSOR__MQTT_TRANSPORT',
+    'TEMP_SENSOR__MQTT_HOST',
+    'TEMP_SENSOR__MQTT_PORT',
+    'TEMP_SENSOR__MQTT_USERNAME',
+    'TEMP_SENSOR__MQTT_PASSWORD',
+    'TEMP_SENSOR__TSL2561_GAIN_NIGHT',
+    'TEMP_SENSOR__TSL2561_GAIN_DAY',
+    'TEMP_SENSOR__TSL2561_INT_NIGHT',
+    'TEMP_SENSOR__TSL2561_INT_DAY',
+    'TEMP_SENSOR__TSL2591_GAIN_NIGHT',
+    'TEMP_SENSOR__TSL2591_GAIN_DAY',
+    'TEMP_SENSOR__TSL2591_INT_NIGHT',
+    'TEMP_SENSOR__TSL2591_INT_DAY',
     'INDI_CONFIG_DEFAULTS',
     'INDI_CONFIG_DAY',
     'CONFIG_NOTE',
@@ -4184,11 +5530,15 @@ const checkbox_field_names = [
     'IMAGE_CIRCLE_MASK__ENABLE',
     'IMAGE_CIRCLE_MASK__OUTLINE',
     'FISH2PANO__ENABLE',
+    'FISH2PANO__FLIP_H',
+    'FISH2PANO__ENABLE_CARDINAL_DIRS',
     'IMAGE_EXPORT_FLIP_V',
     'IMAGE_EXPORT_FLIP_H',
     'IMAGE_SAVE_FITS',
     'IMAGE_STACK_ALIGN',
     'IMAGE_STACK_SPLIT',
+    'IMAGE_CALIBRATE_DARK',
+    'IMAGE_SAVE_FITS_PRE_DARK',
     'THUMBNAILS__IMAGES_AUTO',
     'NIGHT_GRAYSCALE',
     'DAYTIME_GRAYSCALE',
@@ -4197,8 +5547,11 @@ const checkbox_field_names = [
     'CARDINAL_DIRS__SWAP_NS',
     'CARDINAL_DIRS__SWAP_EW',
     'CARDINAL_DIRS__OUTLINE_CIRCLE',
+    'ORB_PROPERTIES__RETROGRADE',
     'FILETRANSFER__CERT_BYPASS',
     'FILETRANSFER__UPLOAD_METADATA',
+    'FILETRANSFER__UPLOAD_RAW',
+    'FILETRANSFER__UPLOAD_FITS',
     'FILETRANSFER__UPLOAD_VIDEO',
     'FILETRANSFER__UPLOAD_KEOGRAM',
     'FILETRANSFER__UPLOAD_STARTRAIL',
@@ -4213,6 +5566,7 @@ const checkbox_field_names = [
     'MQTTPUBLISH__ENABLE',
     'MQTTPUBLISH__TLS',
     'MQTTPUBLISH__CERT_BYPASS',
+    'MQTTPUBLISH__PUBLISH_IMAGE',
     'SYNCAPI__ENABLE',
     'SYNCAPI__CERT_BYPASS',
     'SYNCAPI__POST_S3',
@@ -4225,6 +5579,15 @@ const checkbox_field_names = [
     'YOUTUBE__UPLOAD_PANORAMA_VIDEO',
     'LIBCAMERA__AWB_ENABLE',
     'LIBCAMERA__AWB_ENABLE_DAY',
+    'TEMP_SENSOR__MQTT_TLS',
+    'TEMP_SENSOR__MQTT_CERT_BYPASS',
+    'DEW_HEATER__ENABLE_DAY',
+    'DEW_HEATER__INVERT_OUTPUT',
+    'DEW_HEATER__THOLD_ENABLE',
+    'FAN__ENABLE_NIGHT',
+    'FAN__INVERT_OUTPUT',
+    'FAN__THOLD_ENABLE',
+    'GENERIC_GPIO__A_INVERT_OUTPUT',
     'WEB_NONLOCAL_IMAGES',
     'WEB_LOCAL_IMAGES_ADMIN',
     'RELOAD_ON_SAVE',
@@ -4254,7 +5617,6 @@ fields['form_global'] = {
 
 
 $('#form_config').on('submit', function() {
-
     // hide all errors
     successMessage.css({'display' : 'none'});
     Object.keys(fields).forEach((key) => {
@@ -4267,6 +5629,8 @@ $('#form_config').on('submit', function() {
     field_names.forEach(item => {
         json_data[item] = fields[item].input.val();
     });
+
+    $("#loader_config").css({'display' : 'block'});
 
     // checkboxes
     checkbox_field_names.forEach(item => {
@@ -4283,15 +5647,19 @@ $('#form_config').on('submit', function() {
         contentType: "application/json",
         data: JSON.stringify(json_data),
         success: function(data){
+            $("#loader_config").css({'display' : 'none'});
+
             successMessage.html(data['success-message']);
             successMessage.css({'display' : 'block'});
             setTimeout(function() {
                 successMessage.css({'display' : 'none'});
-            }, 10000);
+            }, 15000);
 
             $('#CONFIG_NOTE').val('');
         },
         error: function(data){
+            $("#loader_config").css({'display' : 'none'});
+
             var errors = JSON.parse(data.responseText);
             Object.keys(errors).forEach((key) => {
                 fields[key].input.addClass('is-invalid');
@@ -4382,6 +5750,17 @@ $('#WEB_NONLOCAL_IMAGES').on('change', function() {
     }
 });
 
+// cardinal dirs
+$('#CARDINAL_DIRS__ENABLE').on('change', function() {
+    if ($('#CARDINAL_DIRS__ENABLE').prop('checked')) {
+        $('#FISH2PANO__ENABLE_CARDINAL_DIRS').removeAttr('disabled');
+        $('#FISH2PANO__ENABLE_CARDINAL_DIRS').prop('checked', true);
+    } else {
+        $('#FISH2PANO__ENABLE_CARDINAL_DIRS').prop('checked', false);
+        $('#FISH2PANO__ENABLE_CARDINAL_DIRS').attr('disabled', true);
+    }
+});
+
 
 $( document ).ready(function() {
     // Daytime timelapse
@@ -4444,6 +5823,15 @@ $( document ).ready(function() {
     } else {
         $('#WEB_LOCAL_IMAGES_ADMIN').prop('checked', false);
         $('#WEB_LOCAL_IMAGES_ADMIN').attr('disabled', true);
+    }
+
+    // cardinal dirs
+    if ($('#CARDINAL_DIRS__ENABLE').prop('checked')) {
+        $('#FISH2PANO__ENABLE_CARDINAL_DIRS').removeAttr('disabled');
+        $('#FISH2PANO__ENABLE_CARDINAL_DIRS').prop('checked', true);
+    } else {
+        $('#FISH2PANO__ENABLE_CARDINAL_DIRS').prop('checked', false);
+        $('#FISH2PANO__ENABLE_CARDINAL_DIRS').attr('disabled', true);
     }
 });
 

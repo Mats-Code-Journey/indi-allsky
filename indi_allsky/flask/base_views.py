@@ -194,6 +194,9 @@ class BaseView(View):
         obs.lat = math.radians(self.camera.latitude)
         obs.elevation = self.camera.elevation
 
+        # disable atmospheric refraction calcs
+        obs.pressure = 0
+
         sun = ephem.Sun()
 
         obs.date = utcnow
@@ -214,6 +217,9 @@ class BaseView(View):
 
     def _load_detection_mask(self):
         import cv2
+        from multiprocessing import Value
+        from ..maskProcessing import MaskProcessor
+
 
         detect_mask = self.indi_allsky_config.get('DETECT_MASK', '')
 
@@ -250,10 +256,106 @@ class BaseView(View):
         #mask_data[mask_data < 255] = 0  # did not quite work
 
 
-        return mask_data
+        bin_v = Value('i', 1)  # always assume bin 1
+        mask_processor = MaskProcessor(
+            self.indi_allsky_config,
+            bin_v,
+        )
+
+
+        # masks need to be rotated, flipped, cropped for post-processed images
+        mask_processor.image = mask_data
+
+
+        if self.indi_allsky_config.get('IMAGE_ROTATE'):
+            mask_processor.rotate_90()
+
+
+        # rotation
+        if self.indi_allsky_config.get('IMAGE_ROTATE_ANGLE'):
+            mask_processor.rotate_angle()
+
+
+        # verticle flip
+        if self.indi_allsky_config.get('IMAGE_FLIP_V'):
+            mask_processor.flip_v()
+
+
+        # horizontal flip
+        if self.indi_allsky_config.get('IMAGE_FLIP_H'):
+            mask_processor.flip_h()
+
+
+        # crop
+        if self.indi_allsky_config.get('IMAGE_CROP_ROI'):
+            mask_processor.crop_image()
+
+
+        # scale
+        if self.indi_allsky_config['IMAGE_SCALE'] and self.indi_allsky_config['IMAGE_SCALE'] != 100:
+            mask_processor.scale_image()
+
+
+        return mask_processor.image
 
 
 class TemplateView(BaseView):
+
+    SENSOR_SLOT_choices = [  # mutable
+        ('0', 'Camera Temp'),
+        ('1', 'Dew Heater Level'),
+        ('2', 'Dew Point'),
+        ('3', 'Frost Point'),
+        ('4', 'Fan Level'),
+        ('5', 'Heat Index'),
+        ('6', 'Wind Dir Degrees'),
+        ('7', 'SQM'),
+        ('8', 'Reserved'),
+        ('9', 'Reserved'),
+        ('10', 'User Slot 10'),
+        ('11', 'User Slot 11'),
+        ('12', 'User Slot 12'),
+        ('13', 'User Slot 13'),
+        ('14', 'User Slot 14'),
+        ('15', 'User Slot 15'),
+        ('16', 'User Slot 16'),
+        ('17', 'User Slot 17'),
+        ('18', 'User Slot 18'),
+        ('19', 'User Slot 19'),
+        ('20', 'User Slot 20'),
+        ('21', 'User Slot 21'),
+        ('22', 'User Slot 22'),
+        ('23', 'User Slot 23'),
+        ('24', 'User Slot 24'),
+        ('25', 'User Slot 25'),
+        ('26', 'User Slot 26'),
+        ('27', 'User Slot 27'),
+        ('28', 'User Slot 28'),
+        ('29', 'User Slot 29'),
+        ('100', 'Camera Temp'),
+        ('110', 'System Temp 10'),
+        ('111', 'System Temp 11'),
+        ('112', 'System Temp 12'),
+        ('113', 'System Temp 13'),
+        ('114', 'System Temp 14'),
+        ('115', 'System Temp 15'),
+        ('116', 'System Temp 16'),
+        ('117', 'System Temp 17'),
+        ('118', 'System Temp 18'),
+        ('119', 'System Temp 19'),
+        ('120', 'System Temp 20'),
+        ('121', 'System Temp 21'),
+        ('122', 'System Temp 22'),
+        ('123', 'System Temp 23'),
+        ('124', 'System Temp 24'),
+        ('125', 'System Temp 25'),
+        ('126', 'System Temp 26'),
+        ('127', 'System Temp 27'),
+        ('128', 'System Temp 28'),
+        ('129', 'System Temp 29'),
+    ]
+
+
     def __init__(self, template_name, **kwargs):
         super(TemplateView, self).__init__(**kwargs)
         self.template_name = template_name
@@ -358,32 +460,6 @@ class TemplateView(BaseView):
 
 
         ### assuming indi-allsky process is running if we reach this point
-        longitude = self.camera.longitude
-        latitude = self.camera.latitude
-        elevation = self.camera.elevation
-
-        # this can be eventually removed
-        if isinstance(elevation, type(None)):
-            elevation = 0
-
-
-        utcnow = datetime.now(tz=timezone.utc)  # ephem expects UTC dates
-
-        obs = ephem.Observer()
-        obs.lon = math.radians(longitude)
-        obs.lat = math.radians(latitude)
-        obs.elevation = elevation
-
-        sun = ephem.Sun()
-
-        obs.date = utcnow
-        sun.compute(obs)
-        sun_alt = math.degrees(sun.alt)
-
-        if sun_alt > self.camera.nightSunAlt:
-            night = False
-        else:
-            night = True
 
 
         if self.indi_allsky_config.get('FOCUS_MODE', False):
@@ -402,12 +478,37 @@ class TemplateView(BaseView):
             )
 
 
-        if not night and not self.daytime_capture:
-            data['status'] = '<span class="text-muted">SLEEPING</span>'
+        try:
+            status = int(self._miscDb.getState('STATUS'))
+        except NoResultFound:
+            # legacy
+            data['status'] = '<span class="text-success">RUNNING</span>'
+            return data
+        except ValueError:
+            # legacy
+            data['status'] = '<span class="text-danger">UNKNOWN</span>'
             return data
 
 
-        data['status'] = '<span class="text-success">RUNNING</span>'
+        if status == constants.STATUS_RUNNING:
+            data['status'] = '<span class="text-success">RUNNING</span>'
+        elif status == constants.STATUS_SLEEPING:
+            data['status'] = '<span class="text-muted">SLEEPING</span>'
+        elif status == constants.STATUS_RELOADING:
+            data['status'] = '<span class="text-warning">RELOADING</span>'
+        elif status == constants.STATUS_STARTING:
+            data['status'] = '<span class="text-info">STARTING</span>'
+        elif status == constants.STATUS_STOPPING:
+            data['status'] = '<span class="text-primary">STOPPING</span>'
+        elif status == constants.STATUS_STOPPED:
+            data['status'] = '<span class="text-primary">STOPPED</span>'
+        elif status == constants.STATUS_NOCAMERA:
+            data['status'] = '<span class="text-danger">NO CAMERA</span>'
+        elif status == constants.STATUS_NOINDISERVER:
+            data['status'] = '<span class="text-danger">NO INDISERVER</span>'
+        else:
+            data['status'] = '<span class="text-danger">UNKNOWN</span>'
+
         return data
 
 
@@ -462,6 +563,9 @@ class TemplateView(BaseView):
         obs.lon = math.radians(longitude)
         obs.lat = math.radians(latitude)
         obs.elevation = elevation
+
+        # disable atmospheric refraction calcs
+        obs.pressure = 0
 
         sun = ephem.Sun()
         moon = ephem.Moon()
@@ -742,6 +846,84 @@ class TemplateView(BaseView):
             return '<a href="{0:s}" style="text-decoration: none">Login</a>'.format(url_for('auth_indi_allsky.login_view'))
 
         return '<a href="{0:s}" style="text-decoration: none">{1:s}</a>'.format(url_for('indi_allsky.user_view'), current_user.username)
+
+
+    def update_sensor_slot_labels(self):
+        from ..devices import sensors as indi_allsky_sensors
+
+        temp_sensor__a_classname = self.indi_allsky_config.get('TEMP_SENSOR', {}).get('A_CLASSNAME', '')
+        temp_sensor__a_label = self.indi_allsky_config.get('TEMP_SENSOR', {}).get('A_LABEL', 'Sensor A')
+        temp_sensor__a_user_var_slot = self.indi_allsky_config.get('TEMP_SENSOR', {}).get('A_USER_VAR_SLOT')
+        temp_sensor__b_classname = self.indi_allsky_config.get('TEMP_SENSOR', {}).get('B_CLASSNAME', '')
+        temp_sensor__b_label = self.indi_allsky_config.get('TEMP_SENSOR', {}).get('B_LABEL', 'Sensor B')
+        temp_sensor__b_user_var_slot = self.indi_allsky_config.get('TEMP_SENSOR', {}).get('B_USER_VAR_SLOT')
+        temp_sensor__c_classname = self.indi_allsky_config.get('TEMP_SENSOR', {}).get('C_CLASSNAME', '')
+        temp_sensor__c_label = self.indi_allsky_config.get('TEMP_SENSOR', {}).get('C_LABEL', 'Sensor C')
+        temp_sensor__c_user_var_slot = self.indi_allsky_config.get('TEMP_SENSOR', {}).get('C_USER_VAR_SLOT')
+
+
+        # fix system temp offset
+        if temp_sensor__a_user_var_slot >= 100:
+            temp_sensor__a_user_var_slot -= 79
+
+        if temp_sensor__b_user_var_slot >= 100:
+            temp_sensor__b_user_var_slot -= 79
+
+        if temp_sensor__c_user_var_slot >= 100:
+            temp_sensor__c_user_var_slot -= 79
+
+
+        if temp_sensor__a_classname:
+            try:
+                temp_sensor__a_class = getattr(indi_allsky_sensors, temp_sensor__a_classname)
+
+                for x in range(temp_sensor__a_class.METADATA['count']):
+                    self.SENSOR_SLOT_choices[temp_sensor__a_user_var_slot + x] = (
+                        str(temp_sensor__a_user_var_slot + x),
+                        '{0:s} - {1:s} - {2:s}'.format(
+                            temp_sensor__a_class.METADATA['name'],
+                            temp_sensor__a_label,
+                            temp_sensor__a_class.METADATA['labels'][x],
+                        )
+                    )
+            except AttributeError:
+                app.logger.error('Unknown sensor class: %s', temp_sensor__a_classname)
+
+
+        if temp_sensor__b_classname:
+            try:
+                temp_sensor__b_class = getattr(indi_allsky_sensors, temp_sensor__b_classname)
+
+                for x in range(temp_sensor__b_class.METADATA['count']):
+                    self.SENSOR_SLOT_choices[temp_sensor__b_user_var_slot + x] = (
+                        str(temp_sensor__b_user_var_slot + x),
+                        '{0:s} - {1:s} - {2:s}'.format(
+                            temp_sensor__b_class.METADATA['name'],
+                            temp_sensor__b_label,
+                            temp_sensor__b_class.METADATA['labels'][x],
+                        )
+                    )
+            except AttributeError:
+                app.logger.error('Unknown sensor class: %s', temp_sensor__a_classname)
+
+
+        if temp_sensor__c_classname:
+            try:
+                temp_sensor__c_class = getattr(indi_allsky_sensors, temp_sensor__c_classname)
+
+                for x in range(temp_sensor__c_class.METADATA['count']):
+                    self.SENSOR_SLOT_choices[temp_sensor__c_user_var_slot + x] = (
+                        str(temp_sensor__c_user_var_slot + x),
+                        '{0:s} - {1:s} - {2:s}'.format(
+                            temp_sensor__c_class.METADATA['name'],
+                            temp_sensor__c_label,
+                            temp_sensor__c_class.METADATA['labels'][x],
+                        )
+                    )
+            except AttributeError:
+                app.logger.error('Unknown sensor class: %s', temp_sensor__a_classname)
+
+
 
 
 class FormView(TemplateView):

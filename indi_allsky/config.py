@@ -1,6 +1,8 @@
 import sys
 import os
 import time
+from datetime import datetime
+from datetime import timezone
 import io
 import json
 import tempfile
@@ -84,6 +86,7 @@ class IndiAllSkyConfigBase(object):
         "CCD_COOLING"      : False,
         "CCD_TEMP"         : 15.0,
         "TEMP_DISPLAY"     : "c",  # c = celcius, f = fahrenheit, k = kelvin",
+        "PRESSURE_DISPLAY" : "hPa",  # hPa = hectoPascals/millibars, psi = psi, inHg = inches of mercury, mmHg = mm of mercury
         "CCD_TEMP_SCRIPT"  : "",
         "GPS_ENABLE"       : False,
         "TARGET_ADU"         : 75,
@@ -105,6 +108,7 @@ class IndiAllSkyConfigBase(object):
         "LOCATION_LONGITUDE" : -84.0,
         "LOCATION_ELEVATION" : 300.0,
         "TIMELAPSE_ENABLE"         : True,
+        "TIMELAPSE_SKIP_FRAMES"    : 4,
         "DAYTIME_CAPTURE"          : True,
         "DAYTIME_TIMELAPSE"        : True,
         "DAYTIME_CONTRAST_ENHANCE" : False,
@@ -119,6 +123,10 @@ class IndiAllSkyConfigBase(object):
         "WEB_LOCAL_IMAGES_ADMIN"   : False,
         "WEB_EXTRA_TEXT"           : "",
         "WEB_STATUS_TEMPLATE"      : "Status: {status:s}\nLat: {latitude:0.1f}/Long: {longitude:0.1f}\nSidereal: {sidereal_time:s}\nMode: {mode:s}\nSun: {sun_alt:0.1f}&deg; {sun_dir:s}\nMoon: {moon_alt:0.1f}&deg; {moon_dir:s}\nPhase: {moon_phase_str:s} <span data-bs-toggle=\"tooltip\" data-bs-placement=\"right\" title=\"{moon_phase:0.0f}%\">{moon_glyph:s}</span>\nSmoke: {smoke_rating:s} {smoke_rating_status}\nKp-index: {kpindex:0.2f} {kpindex_rating:s} {kpindex_trend:s} {kpindex_status:s}\nAurora: {ovation_max:d}% {ovation_max_status}",
+        "HEALTHCHECK" : {
+            "DISK_USAGE"     : 90.0,
+            "SWAP_USAGE"     : 90.0,
+        },
         "IMAGE_STRETCH" : {
             "MODE1_ENABLE"   : False,
             "MODE1_GAMMA"    : 3.0,
@@ -144,7 +152,8 @@ class IndiAllSkyConfigBase(object):
         "STARTRAILS_MOON_ALT_THOLD"      : 91.0,
         "STARTRAILS_MOON_PHASE_THOLD"    : 101.0,
         "STARTRAILS_USE_DB_DATA"         : True,
-        "IMAGE_EXIF_PRIVACY" : False,
+        "IMAGE_CALIBRATE_DARK"  : True,
+        "IMAGE_EXIF_PRIVACY"    : False,
         "IMAGE_FILE_TYPE" : "jpg",  # jpg, png, or tif
         "IMAGE_FILE_COMPRESSION" : {
             "jpg"   : 90,
@@ -177,11 +186,17 @@ class IndiAllSkyConfigBase(object):
             "DIAMETER" : 3000,
             "OFFSET_X" : 0,
             "OFFSET_Y" : 0,
-            "ROTATE_ANGLE" : 0,
+            "ROTATE_ANGLE" : -90,
             "SCALE"    : 0.5,
             "MODULUS"  : 2,
+            "FLIP_H"   : False,
+            "ENABLE_CARDINAL_DIRS" : True,
+            "DIRS_OFFSET_BOTTOM"   : 25,
+            "OPENCV_FONT_SCALE"    : 0.8,
+            "PIL_FONT_SIZE"        : 30,
         },
         "IMAGE_SAVE_FITS"     : False,
+        "IMAGE_SAVE_FITS_PRE_DARK" : False,
         "IMAGE_EXPORT_RAW"    : "",  # png or tif (or empty)
         "IMAGE_EXPORT_FOLDER" : "/var/www/html/allsky/images/export",
         "IMAGE_EXPORT_FLIP_V" : False,
@@ -205,6 +220,7 @@ class IndiAllSkyConfigBase(object):
         "FFMPEG_BITRATE"   : "5000k",
         "FFMPEG_VFSCALE"   : "",
         "FFMPEG_CODEC"     : "libx264",
+        "FFMPEG_EXTRA_OPTIONS" : "",
         "FITSHEADERS" : [
             [ "INSTRUME", "indi-allsky" ],
             [ "OBSERVER", "" ],
@@ -253,6 +269,8 @@ class IndiAllSkyConfigBase(object):
             "RADIUS"         : 9,
             "SUN_COLOR"      : [200, 200, 0],
             "MOON_COLOR"     : [128, 128, 128],
+            "AZ_OFFSET"      : 0.0,
+            "RETROGRADE"     : False,
         },
         "UPLOAD_WORKERS" : 2,
         "FILETRANSFER" : {
@@ -271,6 +289,8 @@ class IndiAllSkyConfigBase(object):
             "REMOTE_PANORAMA_NAME"       : "panorama.{ext}",
             "REMOTE_IMAGE_FOLDER"        : "/home/allsky/upload/allsky",
             "REMOTE_PANORAMA_FOLDER"     : "/home/allsky/upload/allsky",
+            "REMOTE_RAW_FOLDER"          : "/home/allsky/upload/allsky/export",
+            "REMOTE_FITS_FOLDER"         : "/home/allsky/upload/allsky/fits",
             "REMOTE_METADATA_NAME"       : "latest_metadata.json",
             "REMOTE_METADATA_FOLDER"     : "/home/allsky/upload/allsky",
             "REMOTE_VIDEO_FOLDER"        : "/home/allsky/upload/allsky/videos",
@@ -281,6 +301,8 @@ class IndiAllSkyConfigBase(object):
             "REMOTE_ENDOFNIGHT_FOLDER"   : "/home/allsky/upload/allsky",
             "UPLOAD_IMAGE"           : 0,
             "UPLOAD_PANORAMA"        : 0,
+            "UPLOAD_RAW"             : False,
+            "UPLOAD_FITS"            : False,
             "UPLOAD_METADATA"        : False,
             "UPLOAD_VIDEO"           : False,
             "UPLOAD_KEOGRAM"         : False,
@@ -324,6 +346,7 @@ class IndiAllSkyConfigBase(object):
             "QOS"                    : 0,  # 0, 1, or 2
             "TLS"                    : True,
             "CERT_BYPASS"            : True,
+            "PUBLISH_IMAGE"          : True,
         },
         "SYNCAPI" : {
             "ENABLE"                 : False,
@@ -358,14 +381,101 @@ class IndiAllSkyConfigBase(object):
             "AWB_DAY"                : "auto",
             "AWB_ENABLE"             : False,
             "AWB_ENABLE_DAY"         : False,
+            "CAMERA_ID"              : 0,
             "EXTRA_OPTIONS"          : "",
             "EXTRA_OPTIONS_DAY"      : "",
         },
         "PYCURL_CAMERA" : {
             "URL"                    : '',
+            "IMAGE_FILE_TYPE"        : "jpg",  # jpg, png
             "USERNAME"               : "",
             "PASSWORD"               : "",
             "PASSWORD_E"             : "",
+        },
+        "FOCUSER" : {
+            "CLASSNAME"              : "",
+            "GPIO_PIN_1"             : "D17",
+            "GPIO_PIN_2"             : "D18",
+            "GPIO_PIN_3"             : "D27",
+            "GPIO_PIN_4"             : "D22",
+        },
+        "DEW_HEATER" : {
+            "CLASSNAME"              : "",
+            "ENABLE_DAY"             : False,
+            "PIN_1"                  : "D12",
+            "INVERT_OUTPUT"          : False,
+            "LEVEL_DEF"              : 100,
+            "THOLD_ENABLE "          : False,
+            "MANUAL_TARGET"          : 0.0,
+            "TEMP_USER_VAR_SLOT"     : 10,
+            "LEVEL_LOW"              : 33,
+            "LEVEL_MED"              : 66,
+            "LEVEL_HIGH"             : 100,
+            "THOLD_DIFF_LOW"         : 15,
+            "THOLD_DIFF_MED"         : 10,
+            "THOLD_DIFF_HIGH"        : 5,
+        },
+        "FAN" : {
+            "CLASSNAME"              : "",
+            "ENABLE_NIGHT"           : False,
+            "PIN_1"                  : "D13",
+            "INVERT_OUTPUT"          : False,
+            "LEVEL_DEF"              : 100,
+            "THOLD_ENABLE "          : False,
+            "TARGET"                 : 30.0,
+            "TEMP_USER_VAR_SLOT"     : 10,
+            "LEVEL_LOW"              : 33,
+            "LEVEL_MED"              : 66,
+            "LEVEL_HIGH"             : 100,
+            "THOLD_DIFF_LOW"         : 0,
+            "THOLD_DIFF_MED"         : 5,
+            "THOLD_DIFF_HIGH"        : 10,
+        },
+        "GENERIC_GPIO" : {
+            "A_CLASSNAME"            : "",
+            "A_PIN_1"                : "D21",
+            "A_INVERT_OUTPUT"        : False,
+        },
+        "TEMP_SENSOR" : {
+            "A_CLASSNAME"            : "",
+            "A_LABEL"                : "Sensor A",
+            "A_PIN_1"                : "D5",
+            "A_USER_VAR_SLOT"        : 10,
+            "A_I2C_ADDRESS"          : "0x77",
+            "B_CLASSNAME"            : "",
+            "B_LABEL"                : "Sensor B",
+            "B_PIN_1"                : "D6",
+            "B_USER_VAR_SLOT"        : 15,
+            "B_I2C_ADDRESS"          : "0x76",
+            "C_CLASSNAME"            : "",
+            "C_LABEL"                : "Sensor C",
+            "C_PIN_1"                : "D16",
+            "C_USER_VAR_SLOT"        : 20,
+            "C_I2C_ADDRESS"          : "0x40",
+            "OPENWEATHERMAP_APIKEY"  : "",
+            "OPENWEATHERMAP_APIKEY_E": "",
+            "MQTT_TRANSPORT"         : "tcp",  # tcp or websockets
+            "MQTT_HOST"              : "localhost",
+            "MQTT_PORT"              : 8883,  # 1883 = mqtt, 8883 = TLS
+            "MQTT_USERNAME"          : "indi-allsky",
+            "MQTT_PASSWORD"          : "",
+            "MQTT_PASSWORD_E"        : "",
+            "MQTT_TLS"               : True,
+            "MQTT_CERT_BYPASS"       : True,
+            "TSL2561_GAIN_NIGHT"     : 1,  # 0=1x, 1=16x
+            "TSL2561_GAIN_DAY"       : 0,
+            "TSL2561_INT_NIGHT"      : 1,  # 0=13.7ms, 1=101ms, 2=402ms, or 3=manual
+            "TSL2561_INT_DAY"        : 1,
+            "TSL2591_GAIN_NIGHT"     : "GAIN_MED",
+            "TSL2591_GAIN_DAY"       : "GAIN_LOW",
+            "TSL2591_INT_NIGHT"      : "INTEGRATIONTIME_100MS",
+            "TSL2591_INT_DAY"        : "INTEGRATIONTIME_100MS",
+        },
+        "CHARTS" : {
+            "CUSTOM_SLOT_1"          : 10,
+            "CUSTOM_SLOT_2"          : 11,
+            "CUSTOM_SLOT_3"          : 12,
+            "CUSTOM_SLOT_4"          : 13,
         },
     })
 
@@ -424,6 +534,15 @@ class IndiAllSkyConfig(IndiAllSkyConfigBase):
 
     def _getConfigEntry(self, config_id=None):
         ### return the last saved config entry
+        utcnow = datetime.now(tz=timezone.utc).replace(tzinfo=None)  # configs stored with UTC
+
+        future_configs = IndiAllSkyDbConfigTable.query\
+            .filter(IndiAllSkyDbConfigTable.createDate > utcnow)\
+            .first()
+
+        if future_configs:
+            logger.warning('!!! CONFIGURATIONS FOUND WITH A TIMESTAMP IN THE FUTURE, TIME MAY HAVE CHANGED !!!')
+
 
         if config_id:
             # not catching NoResultFound
@@ -437,12 +556,17 @@ class IndiAllSkyConfig(IndiAllSkyConfigBase):
                 .limit(1)\
                 .one()
 
+
         return config_entry
 
 
     def _setConfigEntry(self, config, user_entry, note, encrypted):
+        ### Always store configs with UTC
+        utcnow = datetime.now(tz=timezone.utc).replace(tzinfo=None)
+
         config_entry = IndiAllSkyDbConfigTable(
             data=config,
+            createDate=utcnow,
             level=str(__config_level__),
             user_id=user_entry.id,
             note=str(note),
@@ -500,6 +624,21 @@ class IndiAllSkyConfig(IndiAllSkyConfigBase):
             else:
                 pycurl_camera__password = config.get('PYCURL_CAMERA', {}).get('PASSWORD', '')
 
+            temp_sensor__openweathermap_apikey_e = config.get('TEMP_SENSOR', {}).get('OPENWEATHERMAP_APIKEY_E', '')
+            if temp_sensor__openweathermap_apikey_e:
+                # not catching InvalidToken
+                temp_sensor__openweathermap_apikey = f_key.decrypt(temp_sensor__openweathermap_apikey_e.encode()).decode()
+            else:
+                temp_sensor__openweathermap_apikey = config.get('TEMP_SENSOR', {}).get('OPENWEATHERMAP_APIKEY', '')
+
+
+            temp_sensor__mqtt_password_e = config.get('TEMP_SENSOR', {}).get('MQTT_PASSWORD_E', '')
+            if temp_sensor__mqtt_password_e:
+                # not catching InvalidToken
+                temp_sensor__mqtt_password = f_key.decrypt(temp_sensor__mqtt_password_e.encode()).decode()
+            else:
+                temp_sensor__mqtt_password = config.get('TEMP_SENSOR', {}).get('MQTT_PASSWORD', '')
+
         else:
             # passwords should not be encrypted
             filetransfer__password = config.get('FILETRANSFER', {}).get('PASSWORD', '')
@@ -507,6 +646,8 @@ class IndiAllSkyConfig(IndiAllSkyConfigBase):
             mqttpublish__password = config.get('MQTTPUBLISH', {}).get('PASSWORD', '')
             syncapi__apikey = config.get('SYNCAPI', {}).get('APIKEY', '')
             pycurl_camera__password = config.get('PYCURL_CAMERA', {}).get('PASSWORD', '')
+            temp_sensor__openweathermap_apikey = config.get('TEMP_SENSOR', {}).get('OPENWEATHERMAP_APIKEY', '')
+            temp_sensor__mqtt_password = config.get('TEMP_SENSOR', {}).get('MQTT_PASSWORD', '')
 
 
         config['FILETRANSFER']['PASSWORD'] = filetransfer__password
@@ -519,6 +660,10 @@ class IndiAllSkyConfig(IndiAllSkyConfigBase):
         config['SYNCAPI']['APIKEY_E'] = ''
         config['PYCURL_CAMERA']['PASSWORD'] = pycurl_camera__password
         config['PYCURL_CAMERA']['PASSWORD_E'] = ''
+        config['TEMP_SENSOR']['OPENWEATHERMAP_APIKEY'] = temp_sensor__openweathermap_apikey
+        config['TEMP_SENSOR']['OPENWEATHERMAP_APIKEY_E'] = ''
+        config['TEMP_SENSOR']['MQTT_PASSWORD'] = temp_sensor__mqtt_password
+        config['TEMP_SENSOR']['MQTT_PASSWORD_E'] = ''
 
         return config
 
@@ -590,6 +735,24 @@ class IndiAllSkyConfig(IndiAllSkyConfigBase):
                 pycurl_camera__password_e = ''
                 pycurl_camera__password = ''
 
+
+            temp_sensor__openweathermap_apikey = str(config['TEMP_SENSOR']['OPENWEATHERMAP_APIKEY'])
+            if temp_sensor__openweathermap_apikey:
+                temp_sensor__openweathermap_apikey_e = f_key.encrypt(temp_sensor__openweathermap_apikey.encode()).decode()
+                temp_sensor__openweathermap_apikey = ''
+            else:
+                temp_sensor__openweathermap_apikey_e = ''
+                temp_sensor__openweathermap_apikey = ''
+
+
+            temp_sensor__mqtt_password = str(config['TEMP_SENSOR']['MQTT_PASSWORD'])
+            if temp_sensor__mqtt_password:
+                temp_sensor__mqtt_password_e = f_key.encrypt(temp_sensor__mqtt_password.encode()).decode()
+                temp_sensor__mqtt_password = ''
+            else:
+                temp_sensor__mqtt_password_e = ''
+                temp_sensor__mqtt_password = ''
+
         else:
             # passwords should not be encrypted
             encrypted = False
@@ -604,6 +767,10 @@ class IndiAllSkyConfig(IndiAllSkyConfigBase):
             syncapi__apikey_e = ''
             pycurl_camera__password = str(config['PYCURL_CAMERA']['PASSWORD'])
             pycurl_camera__password_e = ''
+            temp_sensor__openweathermap_apikey = str(config['TEMP_SENSOR']['OPENWEATHERMAP_APIKEY'])
+            temp_sensor__openweathermap_apikey_e = ''
+            temp_sensor__mqtt_password = str(config['TEMP_SENSOR']['MQTT_PASSWORD'])
+            temp_sensor__mqtt_password_e = ''
 
 
         config['FILETRANSFER']['PASSWORD'] = filetransfer__password
@@ -616,6 +783,10 @@ class IndiAllSkyConfig(IndiAllSkyConfigBase):
         config['SYNCAPI']['APIKEY_E'] = syncapi__apikey_e
         config['PYCURL_CAMERA']['PASSWORD'] = pycurl_camera__password
         config['PYCURL_CAMERA']['PASSWORD_E'] = pycurl_camera__password_e
+        config['TEMP_SENSOR']['OPENWEATHERMAP_APIKEY'] = temp_sensor__openweathermap_apikey
+        config['TEMP_SENSOR']['OPENWEATHERMAP_APIKEY_E'] = temp_sensor__openweathermap_apikey_e
+        config['TEMP_SENSOR']['MQTT_PASSWORD'] = temp_sensor__mqtt_password
+        config['TEMP_SENSOR']['MQTT_PASSWORD_E'] = temp_sensor__mqtt_password_e
 
 
         return config, encrypted

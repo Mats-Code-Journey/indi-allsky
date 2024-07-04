@@ -68,6 +68,7 @@ WEB_NAME="${INDIALLSKY_WEB_NAME:-}"
 WEB_EMAIL="${INDIALLSKY_WEB_EMAIL:-}"
 
 OPTIONAL_PYTHON_MODULES="${INDIALLSKY_OPTIONAL_PYTHON_MODULES:-false}"
+GPIO_PYTHON_MODULES="${INDIALLSKY_GPIO_PYTHON_MODULES:-false}"
 
 PYINDI_2_0_4="git+https://github.com/indilib/pyindi-client.git@6f8fa80#egg=pyindi-client"
 PYINDI_2_0_0="git+https://github.com/indilib/pyindi-client.git@674706f#egg=pyindi-client"
@@ -273,8 +274,8 @@ echo
 echo
 echo "indi-allsky supports the following camera interfaces."
 echo
-echo "          indi: For astro/planetary cameras normally connected via USB"
-echo "     libcamera: Supports cameras connected via CSI interface on Raspberry Pi SoCs"
+echo "          indi: For astro/planetary cameras normally connected via USB (ZWO, QHY, PlayerOne, SVBony, Altair, Touptek, etc)"
+echo "     libcamera: Supports cameras connected via CSI interface on Raspberry Pi SBCs (Raspi HQ Camera, Camera Module 3, etc)"
 echo "  indi_passive: Connect a second instance of indi-allsky to an existing indi-allsky indiserver"
 echo " pycurl_camera: Download images from a remote web camera"
 echo
@@ -296,7 +297,7 @@ while [ -z "${CAMERA_INTERFACE:-}" ]; do
 
         echo
         PS3="Select a libcamera interface: "
-        select libcamera_interface in libcamera_imx477 libcamera_imx378 libcamera_ov5647 libcamera_imx219 libcamera_imx519 libcamera_imx708 libcamera_imx296_gs libcamera_imx290 libcamera_imx462 libcamera_64mp_hawkeye; do
+        select libcamera_interface in libcamera_imx477 libcamera_imx378 libcamera_ov5647 libcamera_imx219 libcamera_imx519 libcamera_imx708 libcamera_imx296_gs libcamera_imx290 libcamera_imx462 libcamera_imx298 libcamera_64mp_hawkeye libcamera_64mp_owlsight; do
             if [ -n "$libcamera_interface" ]; then
                 # overwrite variable
                 CAMERA_INTERFACE="$libcamera_interface"
@@ -364,18 +365,6 @@ if [[ "$DISTRO_ID" == "raspbian" && "$DISTRO_VERSION_ID" == "12" ]]; then
     fi
 
 
-    # reconfigure system timezone
-    if [ -n "${INDIALLSKY_TIMEZONE:-}" ]; then
-        # this is not validated
-        echo
-        echo "Setting timezone to $INDIALLSKY_TIMEZONE"
-        echo "$INDIALLSKY_TIMEZONE" | sudo tee /etc/timezone
-        sudo dpkg-reconfigure -f noninteractive tzdata
-    else
-        sudo dpkg-reconfigure tzdata
-    fi
-
-
     INSTALL_INDI="false"
 
     if [[ ! -f "${INDI_DRIVER_PATH}/indiserver" && ! -f "/usr/local/bin/indiserver" ]]; then
@@ -400,6 +389,7 @@ if [[ "$DISTRO_ID" == "raspbian" && "$DISTRO_VERSION_ID" == "12" ]]; then
         cmake \
         gfortran \
         whiptail \
+        bc \
         rsyslog \
         cron \
         git \
@@ -450,6 +440,8 @@ if [[ "$DISTRO_ID" == "raspbian" && "$DISTRO_VERSION_ID" == "12" ]]; then
         gifsicle \
         jq \
         sqlite3 \
+        libgpiod2 \
+        i2c-tools \
         policykit-1 \
         dbus-user-session
 
@@ -531,18 +523,6 @@ elif [[ "$DISTRO_ID" == "debian" && "$DISTRO_VERSION_ID" == "12" ]]; then
     fi
 
 
-    # reconfigure system timezone
-    if [ -n "${INDIALLSKY_TIMEZONE:-}" ]; then
-        # this is not validated
-        echo
-        echo "Setting timezone to $INDIALLSKY_TIMEZONE"
-        echo "$INDIALLSKY_TIMEZONE" | sudo tee /etc/timezone
-        sudo dpkg-reconfigure -f noninteractive tzdata
-    else
-        sudo dpkg-reconfigure tzdata
-    fi
-
-
     INSTALL_INDI="false"
 
     if [[ ! -f "${INDI_DRIVER_PATH}/indiserver" && ! -f "/usr/local/bin/indiserver" ]]; then
@@ -567,6 +547,7 @@ elif [[ "$DISTRO_ID" == "debian" && "$DISTRO_VERSION_ID" == "12" ]]; then
         cmake \
         gfortran \
         whiptail \
+        bc \
         rsyslog \
         cron \
         git \
@@ -617,6 +598,8 @@ elif [[ "$DISTRO_ID" == "debian" && "$DISTRO_VERSION_ID" == "12" ]]; then
         gifsicle \
         jq \
         sqlite3 \
+        libgpiod2 \
+        i2c-tools \
         policykit-1 \
         dbus-user-session
 
@@ -698,18 +681,6 @@ elif [[ "$DISTRO_ID" == "raspbian" && "$DISTRO_VERSION_ID" == "11" ]]; then
     fi
 
 
-    # reconfigure system timezone
-    if [ -n "${INDIALLSKY_TIMEZONE:-}" ]; then
-        # this is not validated
-        echo
-        echo "Setting timezone to $INDIALLSKY_TIMEZONE"
-        echo "$INDIALLSKY_TIMEZONE" | sudo tee /etc/timezone
-        sudo dpkg-reconfigure -f noninteractive tzdata
-    else
-        sudo dpkg-reconfigure tzdata
-    fi
-
-
     INSTALL_INDI="false"
 
     if [[ ! -f "${INDI_DRIVER_PATH}/indiserver" && ! -f "/usr/local/bin/indiserver" ]]; then
@@ -734,6 +705,7 @@ elif [[ "$DISTRO_ID" == "raspbian" && "$DISTRO_VERSION_ID" == "11" ]]; then
         cmake \
         gfortran \
         whiptail \
+        bc \
         rsyslog \
         cron \
         git \
@@ -784,6 +756,8 @@ elif [[ "$DISTRO_ID" == "raspbian" && "$DISTRO_VERSION_ID" == "11" ]]; then
         gifsicle \
         jq \
         sqlite3 \
+        libgpiod2 \
+        i2c-tools \
         policykit-1 \
         dbus-user-session
 
@@ -865,18 +839,6 @@ elif [[ "$DISTRO_ID" == "debian" && "$DISTRO_VERSION_ID" == "11" ]]; then
     fi
 
 
-    # reconfigure system timezone
-    if [ -n "${INDIALLSKY_TIMEZONE:-}" ]; then
-        # this is not validated
-        echo
-        echo "Setting timezone to $INDIALLSKY_TIMEZONE"
-        echo "$INDIALLSKY_TIMEZONE" | sudo tee /etc/timezone
-        sudo dpkg-reconfigure -f noninteractive tzdata
-    else
-        sudo dpkg-reconfigure tzdata
-    fi
-
-
     INSTALL_INDI="false"
 
     if [[ ! -f "${INDI_DRIVER_PATH}/indiserver" && ! -f "/usr/local/bin/indiserver" ]]; then
@@ -901,6 +863,7 @@ elif [[ "$DISTRO_ID" == "debian" && "$DISTRO_VERSION_ID" == "11" ]]; then
         cmake \
         gfortran \
         whiptail \
+        bc \
         rsyslog \
         cron \
         git \
@@ -951,6 +914,8 @@ elif [[ "$DISTRO_ID" == "debian" && "$DISTRO_VERSION_ID" == "11" ]]; then
         gifsicle \
         jq \
         sqlite3 \
+        libgpiod2 \
+        i2c-tools \
         policykit-1 \
         dbus-user-session
 
@@ -1019,18 +984,6 @@ elif [[ "$DISTRO_ID" == "raspbian" && "$DISTRO_VERSION_ID" == "10" ]]; then
     fi
 
 
-    # reconfigure system timezone
-    if [ -n "${INDIALLSKY_TIMEZONE:-}" ]; then
-        # this is not validated
-        echo
-        echo "Setting timezone to $INDIALLSKY_TIMEZONE"
-        echo "$INDIALLSKY_TIMEZONE" | sudo tee /etc/timezone
-        sudo dpkg-reconfigure -f noninteractive tzdata
-    else
-        sudo dpkg-reconfigure tzdata
-    fi
-
-
     INSTALL_INDI="false"
 
     if [[ ! -f "${INDI_DRIVER_PATH}/indiserver" && ! -f "/usr/local/bin/indiserver" ]]; then
@@ -1055,6 +1008,7 @@ elif [[ "$DISTRO_ID" == "raspbian" && "$DISTRO_VERSION_ID" == "10" ]]; then
         cmake \
         gfortran \
         whiptail \
+        bc \
         rsyslog \
         cron \
         git \
@@ -1104,6 +1058,8 @@ elif [[ "$DISTRO_ID" == "raspbian" && "$DISTRO_VERSION_ID" == "10" ]]; then
         gifsicle \
         jq \
         sqlite3 \
+        libgpiod2 \
+        i2c-tools \
         policykit-1 \
         dbus-user-session
 
@@ -1183,18 +1139,6 @@ elif [[ "$DISTRO_ID" == "debian" && "$DISTRO_VERSION_ID" == "10" ]]; then
     fi
 
 
-    # reconfigure system timezone
-    if [ -n "${INDIALLSKY_TIMEZONE:-}" ]; then
-        # this is not validated
-        echo
-        echo "Setting timezone to $INDIALLSKY_TIMEZONE"
-        echo "$INDIALLSKY_TIMEZONE" | sudo tee /etc/timezone
-        sudo dpkg-reconfigure -f noninteractive tzdata
-    else
-        sudo dpkg-reconfigure tzdata
-    fi
-
-
     sudo apt-get update
     sudo apt-get -y install \
         build-essential \
@@ -1206,6 +1150,7 @@ elif [[ "$DISTRO_ID" == "debian" && "$DISTRO_VERSION_ID" == "10" ]]; then
         cmake \
         gfortran \
         whiptail \
+        bc \
         rsyslog \
         cron \
         git \
@@ -1241,6 +1186,8 @@ elif [[ "$DISTRO_ID" == "debian" && "$DISTRO_VERSION_ID" == "10" ]]; then
         gifsicle \
         jq \
         sqlite3 \
+        libgpiod2 \
+        i2c-tools \
         policykit-1 \
         dbus-user-session
 
@@ -1282,6 +1229,176 @@ elif [[ "$DISTRO_ID" == "debian" && "$DISTRO_VERSION_ID" == "10" ]]; then
             indi-gpsd \
             indi-gpsnmea
     fi
+
+elif [[ "$DISTRO_ID" == "ubuntu" && "$DISTRO_VERSION_ID" == "24.04" ]]; then
+    RSYSLOG_USER=syslog
+    RSYSLOG_GROUP=adm
+
+    MYSQL_ETC="/etc/mysql"
+
+    PYTHON_BIN=python3
+
+    if [ "$CPU_ARCH" == "armv7l" ]; then
+        VIRTUALENV_REQ=requirements/requirements_latest_32.txt
+        VIRTUALENV_REQ_OPT=requirements/requirements_optional.txt
+        VIRTUALENV_REQ_POST=requirements/requirements_latest_32_post.txt
+    elif [ "$CPU_ARCH" == "armv6l" ]; then
+        VIRTUALENV_REQ=requirements/requirements_latest_armv6l.txt
+        VIRTUALENV_REQ_OPT=requirements/requirements_optional.txt
+        VIRTUALENV_REQ_POST=requirements/requirements_latest_32_post.txt
+    elif [ "$CPU_ARCH" == "i686" ]; then
+        VIRTUALENV_REQ=requirements/requirements_latest_32.txt
+        VIRTUALENV_REQ_OPT=requirements/requirements_optional.txt
+        VIRTUALENV_REQ_POST=requirements/requirements_latest_32_post.txt
+    elif [[ "$CPU_ARCH" == "aarch64" && "$CPU_BITS" == "32" ]]; then
+        VIRTUALENV_REQ=requirements/requirements_latest_32.txt
+        VIRTUALENV_REQ_OPT=requirements/requirements_optional.txt
+        VIRTUALENV_REQ_POST=requirements/requirements_latest_32_post.txt
+    elif [[ "$CPU_ARCH" == "x86_64" && "$CPU_BITS" == "32" ]]; then
+        VIRTUALENV_REQ=requirements/requirements_latest_32.txt
+        VIRTUALENV_REQ_OPT=requirements/requirements_optional.txt
+        VIRTUALENV_REQ_POST=requirements/requirements_latest_32_post.txt
+    else
+        VIRTUALENV_REQ=requirements/requirements_latest.txt
+        VIRTUALENV_REQ_OPT=requirements/requirements_optional.txt
+        VIRTUALENV_REQ_POST=requirements/requirements_empty.txt
+    fi
+
+
+    if [[ "$CPU_ARCH" == "x86_64" && "$CPU_BITS" == "64" ]]; then
+        if [[ ! -f "${INDI_DRIVER_PATH}/indiserver" && ! -f "/usr/local/bin/indiserver" ]]; then
+            sudo add-apt-repository -y ppa:mutlaqja/ppa
+        fi
+    elif [[ "$CPU_ARCH" == "aarch64" && "$CPU_BITS" == "64" ]]; then
+        if [[ ! -f "${INDI_DRIVER_PATH}/indiserver" && ! -f "/usr/local/bin/indiserver" ]]; then
+            sudo add-apt-repository -y ppa:mutlaqja/ppa
+        fi
+    elif [[ "$CPU_ARCH" == "armv7l" || "$CPU_ARCH" == "armv6l" ]]; then
+        INSTALL_INDI="false"
+
+        if [[ ! -f "${INDI_DRIVER_PATH}/indiserver" && ! -f "/usr/local/bin/indiserver" ]]; then
+            echo
+            echo
+            echo "There are not prebuilt indi packages for this distribution"
+            echo "Please run ./misc/build_indi.sh before running setup.sh"
+            echo
+            echo
+            exit 1
+        fi
+    fi
+
+
+    sudo apt-get update
+    sudo apt-get -y install \
+        build-essential \
+        python3 \
+        python3-dev \
+        python3-venv \
+        python3-pip \
+        virtualenv \
+        cmake \
+        gfortran \
+        whiptail \
+        bc \
+        rsyslog \
+        cron \
+        git \
+        cpio \
+        tzdata \
+        ca-certificates \
+        avahi-daemon \
+        apache2 \
+        swig \
+        libatlas-base-dev \
+        libilmbase-dev \
+        libopenexr-dev \
+        libgtk-3-0 \
+        libssl-dev \
+        libxml2-dev \
+        libxslt-dev \
+        libgnutls28-dev \
+        libcurl4-gnutls-dev \
+        libcfitsio-dev \
+        libnova-dev \
+        libdbus-1-dev \
+        libglib2.0-dev \
+        libffi-dev \
+        libopencv-dev \
+        libopenblas-dev \
+        libraw-dev \
+        libgeos-dev \
+        libtiff5-dev \
+        libjpeg8-dev \
+        libopenjp2-7-dev \
+        libpng-dev \
+        zlib1g-dev \
+        libfreetype6-dev \
+        liblcms2-dev \
+        libwebp-dev \
+        libcap-dev \
+        tcl8.6-dev \
+        tk8.6-dev \
+        python3-tk \
+        libharfbuzz-dev \
+        libfribidi-dev \
+        libxcb1-dev \
+        default-libmysqlclient-dev \
+        pkg-config \
+        rustc \
+        cargo \
+        ffmpeg \
+        gifsicle \
+        jq \
+        sqlite3 \
+        libgpiod2 \
+        i2c-tools \
+        policykit-1 \
+        dbus-user-session
+
+
+    if [[ "$USE_MYSQL_DATABASE" == "true" ]]; then
+        sudo apt-get -y install \
+            mariadb-server
+    fi
+
+
+    if [[ "$INSTALL_INDI" == "true" && -f "/usr/bin/indiserver" ]]; then
+        if ! whiptail --title "indi software update" --yesno "INDI is already installed, would you like to upgrade the software?" 0 0 --defaultno; then
+            INSTALL_INDI="false"
+        fi
+    fi
+
+    if [[ "$INSTALL_INDI" == "true" ]]; then
+        sudo apt-get -y install \
+            indi-full \
+            libindi-dev \
+            indi-webcam \
+            indi-asi \
+            libasi \
+            indi-qhy \
+            libqhy \
+            indi-playerone \
+            libplayerone \
+            indi-svbony \
+            libsvbony \
+            libaltaircam \
+            libmallincam \
+            libmicam \
+            libnncam \
+            indi-toupbase \
+            libtoupcam \
+            indi-gphoto \
+            indi-sx \
+            indi-gpsd \
+            indi-gpsnmea
+    fi
+
+
+    #if [[ "$INSTALL_LIBCAMERA" == "true" ]]; then
+    #    sudo apt-get -y install \
+    #        rpicam-apps
+    #fi
+
 
 elif [[ "$DISTRO_ID" == "ubuntu" && "$DISTRO_VERSION_ID" == "22.04" ]]; then
     RSYSLOG_USER=syslog
@@ -1341,18 +1458,6 @@ elif [[ "$DISTRO_ID" == "ubuntu" && "$DISTRO_VERSION_ID" == "22.04" ]]; then
     fi
 
 
-    # reconfigure system timezone
-    if [ -n "${INDIALLSKY_TIMEZONE:-}" ]; then
-        # this is not validated
-        echo
-        echo "Setting timezone to $INDIALLSKY_TIMEZONE"
-        echo "$INDIALLSKY_TIMEZONE" | sudo tee /etc/timezone
-        sudo dpkg-reconfigure -f noninteractive tzdata
-    else
-        sudo dpkg-reconfigure tzdata
-    fi
-
-
     sudo apt-get update
     sudo apt-get -y install \
         build-essential \
@@ -1367,6 +1472,7 @@ elif [[ "$DISTRO_ID" == "ubuntu" && "$DISTRO_VERSION_ID" == "22.04" ]]; then
         cmake \
         gfortran \
         whiptail \
+        bc \
         rsyslog \
         cron \
         git \
@@ -1417,6 +1523,8 @@ elif [[ "$DISTRO_ID" == "ubuntu" && "$DISTRO_VERSION_ID" == "22.04" ]]; then
         gifsicle \
         jq \
         sqlite3 \
+        libgpiod2 \
+        i2c-tools \
         policykit-1 \
         dbus-user-session
 
@@ -1513,18 +1621,6 @@ elif [[ "$DISTRO_ID" == "ubuntu" && "$DISTRO_VERSION_ID" == "20.04" ]]; then
     fi
 
 
-    # reconfigure system timezone
-    if [ -n "${INDIALLSKY_TIMEZONE:-}" ]; then
-        # this is not validated
-        echo
-        echo "Setting timezone to $INDIALLSKY_TIMEZONE"
-        echo "$INDIALLSKY_TIMEZONE" | sudo tee /etc/timezone
-        sudo dpkg-reconfigure -f noninteractive tzdata
-    else
-        sudo dpkg-reconfigure tzdata
-    fi
-
-
     sudo apt-get update
     sudo apt-get -y install \
         build-essential \
@@ -1539,6 +1635,7 @@ elif [[ "$DISTRO_ID" == "ubuntu" && "$DISTRO_VERSION_ID" == "20.04" ]]; then
         cmake \
         gfortran \
         whiptail \
+        bc \
         rsyslog \
         cron \
         git \
@@ -1589,6 +1686,8 @@ elif [[ "$DISTRO_ID" == "ubuntu" && "$DISTRO_VERSION_ID" == "20.04" ]]; then
         gifsicle \
         jq \
         sqlite3 \
+        libgpiod2 \
+        i2c-tools \
         policykit-1 \
         dbus-user-session
 
@@ -1634,6 +1733,8 @@ else
     echo "Unknown distribution $DISTRO_ID $DISTRO_VERSION_ID ($CPU_ARCH)"
     exit 1
 fi
+
+VIRTUALENV_REQ_GPIO=requirements/requirements_gpio.txt
 
 
 if [ -z "$DBUS_SESSION_BUS_ADDRESS" ]; then
@@ -1701,6 +1802,9 @@ if whiptail --title "Optional Python Modules" --yesno "Would you like to install
     OPTIONAL_PYTHON_MODULES=true
 fi
 
+if whiptail --title "GPIO Python Modules" --yesno "Would you like to install GPIO python modules? (Hardware device support)" 0 0 --defaultno; then
+    GPIO_PYTHON_MODULES=true
+fi
 
 # shellcheck source=/dev/null
 source "${ALLSKY_DIRECTORY}/virtualenv/indi-allsky/bin/activate"
@@ -1708,11 +1812,17 @@ source "${ALLSKY_DIRECTORY}/virtualenv/indi-allsky/bin/activate"
 pip3 install --upgrade pip setuptools wheel
 
 
+PIP_REQ_ARGS=("-r" "${ALLSKY_DIRECTORY}/${VIRTUALENV_REQ}")
+
 if [ "${OPTIONAL_PYTHON_MODULES}" == "true" ]; then
-    pip3 install -r "${ALLSKY_DIRECTORY}/${VIRTUALENV_REQ}" -r "${ALLSKY_DIRECTORY}/${VIRTUALENV_REQ_OPT}"
-else
-    pip3 install -r "${ALLSKY_DIRECTORY}/${VIRTUALENV_REQ}"
+    PIP_REQ_ARGS+=("-r" "${ALLSKY_DIRECTORY}/${VIRTUALENV_REQ_OPT}")
 fi
+
+if [ "${GPIO_PYTHON_MODULES}" == "true" ]; then
+    PIP_REQ_ARGS+=("-r" "${ALLSKY_DIRECTORY}/${VIRTUALENV_REQ_GPIO}")
+fi
+
+pip3 install "${PIP_REQ_ARGS[@]}"
 
 
 # some modules do not have their prerequisites set
@@ -1722,6 +1832,7 @@ pip3 install -r "${ALLSKY_DIRECTORY}/${VIRTUALENV_REQ_POST}"
 
 # pyindi-client setup
 SUPPORTED_INDI_VERSIONS=(
+    "2.0.8"
     "2.0.7"
     "2.0.6"
     "2.0.5"
@@ -1774,7 +1885,9 @@ done
 
 
 
-if [ "$INDI_VERSION" == "2.0.7" ]; then
+if [ "$INDI_VERSION" == "2.0.8" ]; then
+    pip3 install "$PYINDI_2_0_4"
+elif [ "$INDI_VERSION" == "2.0.7" ]; then
     pip3 install "$PYINDI_2_0_4"
 elif [ "$INDI_VERSION" == "2.0.6" ]; then
     pip3 install "$PYINDI_2_0_4"
@@ -1945,15 +2058,33 @@ fi
 
 
 echo "**** Setup policy kit permissions ****"
-TMP8=$(mktemp)
-sed \
- -e "s|%ALLSKY_USER%|$USER|g" \
- "${ALLSKY_DIRECTORY}/service/90-org.aaronwmorris.indi-allsky.pkla" > "$TMP8"
+TMP_POLKIT=$(mktemp)
 
-sudo cp -f "$TMP8" "/etc/polkit-1/localauthority/50-local.d/90-org.aaronwmorris.indi-allsky.pkla"
-sudo chown root:root "/etc/polkit-1/localauthority/50-local.d/90-org.aaronwmorris.indi-allsky.pkla"
-sudo chmod 644 "/etc/polkit-1/localauthority/50-local.d/90-org.aaronwmorris.indi-allsky.pkla"
-[[ -f "$TMP8" ]] && rm -f "$TMP8"
+if [ -d "/etc/polkit-1/rules.d" ]; then
+    sed \
+     -e "s|%ALLSKY_USER%|$USER|g" \
+     "${ALLSKY_DIRECTORY}/service/90-indi-allsky.rules" > "$TMP_POLKIT"
+
+    sudo cp -f "$TMP_POLKIT" "/etc/polkit-1/rules.d/90-indi-allsky.rules"
+    sudo chown root:root "/etc/polkit-1/rules.d/90-indi-allsky.rules"
+    sudo chmod 644 "/etc/polkit-1/rules.d/90-indi-allsky.rules"
+
+    # remove legacy config
+    if sudo test -f "/etc/polkit-1/localauthority/50-local.d/90-org.aaronwmorris.indi-allsky.pkla"; then
+        sudo rm -f "/etc/polkit-1/localauthority/50-local.d/90-org.aaronwmorris.indi-allsky.pkla"
+    fi
+else
+    # legacy pkla
+    sed \
+     -e "s|%ALLSKY_USER%|$USER|g" \
+     "${ALLSKY_DIRECTORY}/service/90-org.aaronwmorris.indi-allsky.pkla" > "$TMP_POLKIT"
+
+    sudo cp -f "$TMP_POLKIT" "/etc/polkit-1/localauthority/50-local.d/90-org.aaronwmorris.indi-allsky.pkla"
+    sudo chown root:root "/etc/polkit-1/localauthority/50-local.d/90-org.aaronwmorris.indi-allsky.pkla"
+    sudo chmod 644 "/etc/polkit-1/localauthority/50-local.d/90-org.aaronwmorris.indi-allsky.pkla"
+fi
+
+[[ -f "$TMP_POLKIT" ]] && rm -f "$TMP_POLKIT"
 
 
 echo "**** Ensure user is a member of the systemd-journal group ****"
@@ -2214,9 +2345,88 @@ TMP_CONFIG_DUMP=$(mktemp --suffix=.json)
 "${ALLSKY_DIRECTORY}/config.py" dump > "$TMP_CONFIG_DUMP"
 
 
+# Detect location
+LOCATION_LATITUDE=$(jq -r '.LOCATION_LATITUDE' "$TMP_CONFIG_DUMP")
+LOCATION_LONGITUDE=$(jq -r '.LOCATION_LONGITUDE' "$TMP_CONFIG_DUMP")
+
+
+while [ -z "${LOCATION_LATITUDE_INPUT:-}" ]; do
+    # shellcheck disable=SC2068
+    LOCATION_LATITUDE_INPUT=$(whiptail --title "Latitude" --nocancel --inputbox "Please enter your latitude [90.0 to -90.0].  Positive values for the Northern Hemisphere, negative values for the Southern Hemisphere" 0 0 -- "$LOCATION_LATITUDE" 3>&1 1>&2 2>&3)
+    if [[ "$LOCATION_LATITUDE_INPUT" =~ ^[+-]?[0-9]{3}$ ]]; then
+        unset LOCATION_LATITUDE_INPUT
+        whiptail --msgbox "Error: Invalid latitude" 0 0
+        continue
+    fi
+
+    if ! [[ "$LOCATION_LATITUDE_INPUT" =~ ^[+-]?[0-9]{1,2}\.?[0-9]*$ ]]; then
+        unset LOCATION_LATITUDE_INPUT
+        whiptail --msgbox "Error: Invalid latitude" 0 0
+        continue
+    fi
+
+    if [[ $(echo "$LOCATION_LATITUDE_INPUT < -90" | bc -l) -eq 1 || $(echo "$LOCATION_LATITUDE_INPUT > 90" | bc -l) -eq 1 ]]; then
+        unset LOCATION_LATITUDE_INPUT
+        whiptail --msgbox "Error: Invalid latitude" 0 0
+        continue
+    fi
+done
+
+while [ -z "${LOCATION_LONGITUDE_INPUT:-}" ]; do
+    # shellcheck disable=SC2068
+    LOCATION_LONGITUDE_INPUT=$(whiptail --title "Longitude" --nocancel --inputbox "Please enter your longitude [-180.0 to 180.0].  Negative values for the Western Hemisphere, positive values for the Eastern Hemisphere" 0 0 -- "$LOCATION_LONGITUDE" 3>&1 1>&2 2>&3)
+    if [[ "$LOCATION_LATITUDE_INPUT" =~ ^[+-]?[0-9]{4}$ ]]; then
+        unset LOCATION_LONGITUDE_INPUT
+        whiptail --msgbox "Error: Invalid longitude" 0 0
+        continue
+    fi
+
+    if ! [[ "$LOCATION_LONGITUDE_INPUT" =~ ^[+-]?[0-9]{1,3}\.?[0-9]*$ ]]; then
+        unset LOCATION_LONGITUDE_INPUT
+        whiptail --msgbox "Error: Invalid longitude" 0 0
+        continue
+    fi
+
+    if [[ $(echo "$LOCATION_LONGITUDE_INPUT < -180" | bc -l) -eq 1 || $(echo "$LOCATION_LONGITUDE_INPUT > 180" | bc -l) -eq 1 ]]; then
+        unset LOCATION_LONGITUDE_INPUT
+        whiptail --msgbox "Error: Invalid longitude" 0 0
+        continue
+    fi
+done
+
+
+TMP_LOCATION=$(mktemp --suffix=.json)
+jq \
+    --argjson latitude "$LOCATION_LATITUDE_INPUT" \
+    --argjson longitude "$LOCATION_LONGITUDE_INPUT" \
+    '.LOCATION_LATITUDE = $latitude | .LOCATION_LONGITUDE = $longitude' "${TMP_CONFIG_DUMP}" > "$TMP_LOCATION"
+
+cat "$TMP_LOCATION" > "$TMP_CONFIG_DUMP"
+
+[[ -f "$TMP_LOCATION" ]] && rm -f "$TMP_LOCATION"
+
+
+
+if [[ "$DISTRO_ID" == "debian" || "$DISTRO_ID" == "ubuntu" || "$DISTRO_ID" == "raspbian" ]]; then
+    # reconfigure system timezone
+    if [ -n "${INDIALLSKY_TIMEZONE:-}" ]; then
+        # this is not validated
+        echo
+        echo "Setting timezone to $INDIALLSKY_TIMEZONE"
+        echo "$INDIALLSKY_TIMEZONE" | sudo tee /etc/timezone
+        sudo dpkg-reconfigure -f noninteractive tzdata
+    else
+        sudo dpkg-reconfigure tzdata
+    fi
+else
+    echo "Unable to set timezone for distribution"
+    exit 1
+fi
+
 
 # Detect IMAGE_FOLDER
 IMAGE_FOLDER=$(jq -r '.IMAGE_FOLDER' "$TMP_CONFIG_DUMP")
+
 
 echo
 echo
@@ -2291,7 +2501,7 @@ else
      "${ALLSKY_DIRECTORY}/service/apache_indi-allsky.conf" > "$TMP3"
 
 
-    if [[ "$DISTRO_ID" == "debian" || "$DISTRO_ID" == "ubuntu" ]]; then
+    if [[ "$DISTRO_ID" == "debian" || "$DISTRO_ID" == "ubuntu" || "$DISTRO_ID" == "raspbian" ]]; then
         sudo cp -f "$TMP3" /etc/apache2/sites-available/indi-allsky.conf
         sudo chown root:root /etc/apache2/sites-available/indi-allsky.conf
         sudo chmod 644 /etc/apache2/sites-available/indi-allsky.conf
@@ -2440,7 +2650,7 @@ if [ "$MEM_TOTAL" -lt "768000" ]; then
 fi
 
 # 25% ffmpeg scaling with libcamera when running 1GB of memory
-if [[ "$CAMERA_INTERFACE" == "libcamera_imx477" || "$CAMERA_INTERFACE" == "libcamera_imx378" || "$CAMERA_INTERFACE" == "libcamera_ov5647" || "$CAMERA_INTERFACE" == "libcamera_imx219" || "$CAMERA_INTERFACE" == "libcamera_imx519" || "$CAMERA_INTERFACE" == "libcamera_imx708" || "$CAMERA_INTERFACE" == "libcamera_64mp_hawkeye" ]]; then
+if [[ "$CAMERA_INTERFACE" == "libcamera_imx477" || "$CAMERA_INTERFACE" == "libcamera_imx378" || "$CAMERA_INTERFACE" == "libcamera_ov5647" || "$CAMERA_INTERFACE" == "libcamera_imx219" || "$CAMERA_INTERFACE" == "libcamera_imx519" || "$CAMERA_INTERFACE" == "libcamera_imx708" || "$CAMERA_INTERFACE" == "libcamera_64mp_hawkeye" || "$CAMERA_INTERFACE" == "libcamera_64mp_owlsight" ]]; then
     if [ "$MEM_TOTAL" -lt "1536000" ]; then
         TMP_LIBCAM_FFMPEG=$(mktemp --suffix=.json)
         jq --arg ffmpeg_vfscale "iw*.25:ih*.25" '.FFMPEG_VFSCALE = $ffmpeg_vfscale' "$TMP_CONFIG_DUMP" > "$TMP_LIBCAM_FFMPEG"
@@ -2452,9 +2662,17 @@ if [[ "$CAMERA_INTERFACE" == "libcamera_imx477" || "$CAMERA_INTERFACE" == "libca
 fi
 
 
-echo "**** Ensure user is a member of the dialout, video groups ****"
+echo "**** Ensure user is a member of the dialout, video, i2c, spi groups ****"
 # for GPS and serial port access
 sudo usermod -a -G dialout,video "$USER"
+
+if getent group i2c >/dev/null 2>&1; then
+    sudo usermod -a -G i2c "$USER"
+fi
+
+if getent group spi >/dev/null 2>&1; then
+    sudo usermod -a -G spi "$USER"
+fi
 
 
 echo "**** Disabling Thomas Jacquin's allsky (ignore errors) ****"

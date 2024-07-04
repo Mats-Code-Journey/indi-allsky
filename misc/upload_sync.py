@@ -266,15 +266,14 @@ class UploadSync(object):
                     self._miscUpload.upload_startrail_video(entry)
                 elif x['table'].__name__ == 'IndiAllSkyDbPanoramaVideoTable':
                     self._miscUpload.upload_panorama_video(entry)
+                elif x['table'].__name__ == 'IndiAllSkyDbRawImageTable':
+                    self._miscUpload.upload_raw_image(entry)
+                elif x['table'].__name__ == 'IndiAllSkyDbFitsImageTable':
+                    self._miscUpload.upload_fits_image(entry)
                 else:
                     logger.error('Unknown table: %s', x['table'].__name__)
 
             elif x['upload_type'] == 's3':
-                # check for thumbnail upload for S3
-                if entry.thumbnail_uuid:
-                    self.addThumbnailS3(entry.thumbnail_uuid)
-
-
                 if x['table'].__name__ == 'IndiAllSkyDbImageTable':
                     image_metadata = {
                         'type'            : constants.IMAGE,
@@ -311,6 +310,12 @@ class UploadSync(object):
                     else:
                         image_metadata['data'] = dict()
 
+
+                    # check for thumbnail upload for S3
+                    if entry.thumbnail_uuid:
+                        self.addThumbnailS3(entry, image_metadata)
+
+
                     self._miscUpload.s3_upload_image(entry, image_metadata)
                 elif x['table'].__name__ == 'IndiAllSkyDbVideoTable':
                     video_metadata = {
@@ -329,6 +334,12 @@ class UploadSync(object):
                         video_metadata['data'] = dict(entry.data)
                     else:
                         video_metadata['data'] = dict()
+
+
+                    # check for thumbnail upload for S3
+                    #if entry.thumbnail_uuid:
+                    #    self.addThumbnailS3(entry, video_metadata)
+
 
                     self._miscUpload.s3_upload_video(entry, video_metadata)
                 elif x['table'].__name__ == 'IndiAllSkyDbKeogramTable':
@@ -349,6 +360,12 @@ class UploadSync(object):
                     else:
                         keogram_metadata['data'] = dict()
 
+
+                    # check for thumbnail upload for S3
+                    if entry.thumbnail_uuid:
+                        self.addThumbnailS3(entry, keogram_metadata)
+
+
                     self._miscUpload.s3_upload_keogram(entry, keogram_metadata)
                 elif x['table'].__name__ == 'IndiAllSkyDbStarTrailsTable':
                     startrail_metadata = {
@@ -367,6 +384,12 @@ class UploadSync(object):
                         startrail_metadata['data'] = dict(entry.data)
                     else:
                         startrail_metadata['data'] = dict()
+
+
+                    # check for thumbnail upload for S3
+                    if entry.thumbnail_uuid:
+                        self.addThumbnailS3(entry, startrail_metadata)
+
 
                     self._miscUpload.s3_upload_startrail(entry, startrail_metadata)
                 elif x['table'].__name__ == 'IndiAllSkyDbStarTrailsVideoTable':
@@ -387,6 +410,12 @@ class UploadSync(object):
                     else:
                         startrail_video_metadata['data'] = dict()
 
+
+                    # check for thumbnail upload for S3
+                    #if entry.thumbnail_uuid:
+                    #    self.addThumbnailS3(entry, startrail_video_metadata)
+
+
                     self._miscUpload.s3_upload_startrail_video(entry, startrail_video_metadata)
                 elif x['table'].__name__ == 'IndiAllSkyDbFitsImageTable':
                     fits_metadata = {
@@ -405,6 +434,12 @@ class UploadSync(object):
                         fits_metadata['data'] = dict(entry.data)
                     else:
                         fits_metadata['data'] = dict()
+
+
+                    # check for thumbnail upload for S3
+                    #if entry.thumbnail_uuid:
+                    #    self.addThumbnailS3(entry, fits_metadata)
+
 
                     self._miscUpload.s3_upload_fits(entry, fits_metadata)
                 elif x['table'].__name__ == 'IndiAllSkyDbRawImageTable':
@@ -425,6 +460,12 @@ class UploadSync(object):
                     else:
                         raw_metadata['data'] = dict()
 
+
+                    # check for thumbnail upload for S3
+                    #if entry.thumbnail_uuid:
+                    #    self.addThumbnailS3(entry, raw_metadata)
+
+
                     self._miscUpload.s3_upload_raw(entry, raw_metadata)
                 elif x['table'].__name__ == 'IndiAllSkyDbPanoramaImageTable':
                     panorama_metadata = {
@@ -443,6 +484,12 @@ class UploadSync(object):
                         panorama_metadata['data'] = dict(entry.data)
                     else:
                         panorama_metadata['data'] = dict()
+
+
+                    # check for thumbnail upload for S3
+                    #if entry.thumbnail_uuid:
+                    #    self.addThumbnailS3(entry, panorama_metadata)
+
 
                     self._miscUpload.s3_upload_panorama(entry, panorama_metadata)
                 elif x['table'].__name__ == 'IndiAllSkyDbPanoramaVideoTable':
@@ -463,18 +510,18 @@ class UploadSync(object):
                     else:
                         panorama_video_metadata['data'] = dict()
 
-                    self._miscUpload.s3_upload_panorama_video(entry, panorama_video_metadata)
 
+                    # check for thumbnail upload for S3
+                    #if entry.thumbnail_uuid:
+                    #    self.addThumbnailS3(entry, panorama_video_metadata)
+
+
+                    self._miscUpload.s3_upload_panorama_video(entry, panorama_video_metadata)
                 else:
                     logger.error('Unknown table: %s', x['table'].__name__)
 
 
             elif x['upload_type'] == 'syncapi':
-                # check for thumbnail upload for syncapi
-                if entry.thumbnail_uuid:
-                    self.addThumbnailSyncapi(entry.thumbnail_uuid)
-
-
                 if x['table'].__name__ == 'IndiAllSkyDbImageTable':
                     image_metadata = {
                         'type'            : constants.IMAGE,
@@ -512,6 +559,12 @@ class UploadSync(object):
                     else:
                         image_metadata['data'] = dict()
 
+
+                    # check for thumbnail upload for syncapi
+                    if entry.thumbnail_uuid:
+                        self.addThumbnailSyncapi(entry, image_metadata)
+
+
                     self._miscUpload.syncapi_image(entry, image_metadata)
                 elif x['table'].__name__ == 'IndiAllSkyDbPanoramaImageTable':
                     panorama_metadata = {
@@ -536,6 +589,12 @@ class UploadSync(object):
                     else:
                         panorama_metadata['data'] = dict()
 
+
+                    # check for thumbnail upload for syncapi
+                    if entry.thumbnail_uuid:
+                        self.addThumbnailSyncapi(entry, panorama_metadata)
+
+
                     self._miscUpload.syncapi_panorama(entry, panorama_metadata)
                 elif x['table'].__name__ == 'IndiAllSkyDbVideoTable':
                     video_metadata = {
@@ -555,6 +614,12 @@ class UploadSync(object):
                         video_metadata['data'] = dict(entry.data)
                     else:
                         video_metadata['data'] = dict()
+
+
+                    # check for thumbnail upload for syncapi
+                    if entry.thumbnail_uuid:
+                        self.addThumbnailSyncapi(entry, video_metadata)
+
 
                     self._miscUpload.syncapi_video(entry, video_metadata)
                 elif x['table'].__name__ == 'IndiAllSkyDbKeogramTable':
@@ -576,6 +641,12 @@ class UploadSync(object):
                     else:
                         keogram_metadata['data'] = dict()
 
+
+                    # check for thumbnail upload for syncapi
+                    if entry.thumbnail_uuid:
+                        self.addThumbnailSyncapi(entry, keogram_metadata)
+
+
                     self._miscUpload.syncapi_keogram(entry, keogram_metadata)
                 elif x['table'].__name__ == 'IndiAllSkyDbStarTrailsTable':
                     startrail_metadata = {
@@ -595,6 +666,12 @@ class UploadSync(object):
                         startrail_metadata['data'] = dict(entry.data)
                     else:
                         startrail_metadata['data'] = dict()
+
+
+                    # check for thumbnail upload for syncapi
+                    if entry.thumbnail_uuid:
+                        self.addThumbnailSyncapi(entry, startrail_metadata)
+
 
                     self._miscUpload.syncapi_startrail(entry, startrail_metadata)
                 elif x['table'].__name__ == 'IndiAllSkyDbStarTrailsVideoTable':
@@ -616,6 +693,12 @@ class UploadSync(object):
                     else:
                         startrail_video_metadata['data'] = dict()
 
+
+                    # check for thumbnail upload for syncapi
+                    if entry.thumbnail_uuid:
+                        self.addThumbnailSyncapi(entry, startrail_video_metadata)
+
+
                     self._miscUpload.syncapi_startrail_video(entry, startrail_video_metadata)
                 elif x['table'].__name__ == 'IndiAllSkyDbPanoramaVideoTable':
                     panorama_video_metadata = {
@@ -636,6 +719,12 @@ class UploadSync(object):
                     else:
                         panorama_video_metadata['data'] = dict()
 
+
+                    # check for thumbnail upload for syncapi
+                    if entry.thumbnail_uuid:
+                        self.addThumbnailSyncapi(entry, panorama_video_metadata)
+
+
                     self._miscUpload.syncapi_panorama_video(entry, panorama_video_metadata)
                 else:
                     logger.error('Unknown table: %s', x['table'].__name__)
@@ -644,9 +733,9 @@ class UploadSync(object):
                 logger.error('Unknown upload type: %s', x['upload_type'])
 
 
-    def addThumbnailS3(self, thumbnail_uuid):
+    def addThumbnailS3(self, entry, entry_metadata):
         thumbnail_entry = IndiAllSkyDbThumbnailTable.query\
-            .filter(IndiAllSkyDbThumbnailTable.uuid == thumbnail_uuid)\
+            .filter(IndiAllSkyDbThumbnailTable.uuid == entry.thumbnail_uuid)\
             .filter(IndiAllSkyDbThumbnailTable.s3_key == sa_null())\
             .first()
 
@@ -657,8 +746,10 @@ class UploadSync(object):
 
         thumbnail_metadata = {
             'type'       : constants.THUMBNAIL,
+            'origin'     : entry_metadata['type'],
             'createDate' : thumbnail_entry.createDate.timestamp(),
             'utc_offset' : thumbnail_entry.createDate.astimezone().utcoffset().total_seconds(),
+            'night'      : entry_metadata['night'],
             'dayDate'    : thumbnail_entry.createDate.strftime('%Y%m%d'),  # this is not correct, but does not really matter
             'uuid'       : thumbnail_entry.uuid,
             'width'      : thumbnail_entry.width,
@@ -675,9 +766,9 @@ class UploadSync(object):
         self._miscUpload.s3_upload_thumbnail(thumbnail_entry, thumbnail_metadata)
 
 
-    def addThumbnailSyncapi(self, thumbnail_uuid):
+    def addThumbnailSyncapi(self, entry, entry_metadata):
         thumbnail_entry = IndiAllSkyDbThumbnailTable.query\
-            .filter(IndiAllSkyDbThumbnailTable.uuid == thumbnail_uuid)\
+            .filter(IndiAllSkyDbThumbnailTable.uuid == entry.thumbnail_uuid)\
             .filter(IndiAllSkyDbThumbnailTable.sync_id == sa_null())\
             .first()
 
@@ -688,8 +779,10 @@ class UploadSync(object):
 
         thumbnail_metadata = {
             'type'       : constants.THUMBNAIL,
+            'origin'     : entry_metadata['type'],
             'createDate' : thumbnail_entry.createDate.timestamp(),
             'utc_offset' : thumbnail_entry.createDate.astimezone().utcoffset().total_seconds(),
+            'night'      : entry_metadata['night'],
             'dayDate'    : thumbnail_entry.createDate.strftime('%Y%m%d'),  # this is not correct, but does not really matter
             'uuid'       : thumbnail_entry.uuid,
             'width'      : thumbnail_entry.width,
@@ -790,7 +883,6 @@ class UploadSync(object):
             status_dict['syncapi'][IndiAllSkyDbPanoramaImageTable] = None
 
 
-
         # s3
         s3_table_list = [
             IndiAllSkyDbVideoTable,
@@ -832,7 +924,6 @@ class UploadSync(object):
             status_dict['s3'][IndiAllSkyDbRawImageTable] = None
 
 
-
         # upload
         upload_table_list = [
             [IndiAllSkyDbVideoTable, 'UPLOAD_VIDEO'],
@@ -840,6 +931,8 @@ class UploadSync(object):
             [IndiAllSkyDbStarTrailsTable, 'UPLOAD_STARTRAIL'],
             [IndiAllSkyDbStarTrailsVideoTable, 'UPLOAD_VIDEO'],
             [IndiAllSkyDbPanoramaVideoTable, 'UPLOAD_VIDEO'],
+            [IndiAllSkyDbRawImageTable, 'UPLOAD_RAW'],
+            [IndiAllSkyDbFitsImageTable, 'UPLOAD_FITS'],
         ]
 
         for table in upload_table_list:
@@ -873,7 +966,6 @@ class UploadSync(object):
             else:
                 logger.info('%s uploading disabled', IndiAllSkyDbPanoramaImageTable.__name__)
                 status_dict['upload'][IndiAllSkyDbPanoramaImageTable] = None
-
 
 
         return status_dict
@@ -961,7 +1053,6 @@ class UploadSync(object):
         return syncapi
 
 
-
     def _startFileUploadWorkers(self):
         for upload_worker_dict in self.upload_worker_list:
             self._fileUploadWorkerStart(upload_worker_dict)
@@ -1026,7 +1117,6 @@ class UploadSync(object):
         uw_dict['worker'].join()
 
 
-
 class NoUploadsAvailable(Exception):
     pass
 
@@ -1056,47 +1146,52 @@ if __name__ == "__main__":
         type=int,
         default=30
     )
-    argparser.add_argument(
+
+
+    upload_images_group = argparser.add_mutually_exclusive_group(required=False)
+    upload_images_group.add_argument(
         '--no-upload-images',
         help='disable image uploading (default)',
         dest='upload_images',
         action='store_false',
     )
-    argparser.add_argument(
+    upload_images_group.add_argument(
         '--upload-images',
         help='enable image uploading',
         dest='upload_images',
         action='store_true',
     )
-    argparser.set_defaults(upload_images=False)
+    upload_images_group.set_defaults(upload_images=False)
 
-    argparser.add_argument(
+    syncapi_group = argparser.add_mutually_exclusive_group(required=False)
+    syncapi_group.add_argument(
         '--no-syncapi',
         help='disable syncapi (all types)',
         dest='syncapi',
         action='store_false',
     )
-    argparser.add_argument(
+    syncapi_group.add_argument(
         '--syncapi',
         help='enable syncapi (all types) (default)',
         dest='syncapi',
         action='store_true',
     )
-    argparser.set_defaults(syncapi_images=True)
+    syncapi_group.set_defaults(syncapi=True)
 
-    argparser.add_argument(
+    syncapi_images_group = argparser.add_mutually_exclusive_group(required=False)
+    syncapi_images_group.add_argument(
         '--no-syncapi-images',
         help='disable syncapi for images',
         dest='syncapi_images',
         action='store_false',
     )
-    argparser.add_argument(
+    syncapi_images_group.add_argument(
         '--syncapi-images',
         help='enable syncapi for images (default)',
         dest='syncapi_images',
         action='store_true',
     )
-    argparser.set_defaults(syncapi_images=True)
+    syncapi_images_group.set_defaults(syncapi_images=True)
 
 
     args = argparser.parse_args()

@@ -6,6 +6,34 @@ indi-allsky is software used to manage a Linux-based All Sky Camera using the IN
 
 
 ## New Features
+* Weather API
+    * OpenWeather Map API
+* Native Fan controller support
+    * Standard
+    * PWM Controlled
+* Native Dew Heater support
+    * Standard
+    * PWM Controlled
+* Native Temperature Sensor support
+    * DS18B20 1-wire
+    * DHT11/22
+    * BMP180
+    * BME280 (i2c & SPI)
+    * BME680 (i2c & SPI)
+    * Si7021
+    * SHT40/41/45
+    * LM35 via ADS1x15 ADC
+    * TMP36 via ADS1x15 ADC
+    * MLX90614 Sky Temperature
+* Light (Lux) Sensors
+    * TSL2561
+    * TSL2591
+    * BH1750 (GY-30)
+* Generic GPIO controls
+* MQTT Broker sensors
+    * Subscribe to topics as sensor input
+* Mechanical focuser support
+    * 28BYJ-48 Stepper
 * Use star metrics (in addition to ADU) for star trails generation
 * Generate thumbnails to reduce load time in Timelapse view
 * Panorama timelapse generation
@@ -34,7 +62,8 @@ indi-allsky is software used to manage a Linux-based All Sky Camera using the IN
         * IMX378
         * Camera Module v3 (imx708)
         * IMX519
-        * 64mp HawkEye
+        * 64mp HawkEye (IMX682)
+        * 64mp OwlSight (OV64A40)
         * other libcamera supported modules
     * DSLRs
     * Generic web cameras
@@ -97,6 +126,7 @@ https://github.com/aaronwmorris/indi-allsky/wiki/FAQ
 | Debian 12 (bookworm)           | x86_64         | Compile INDI with build_indi.sh |
 | Debian 11 (bullseye)           | x86_64         | Compile INDI with build_indi.sh |
 | Debian 10 (buster)             | x86_64         | (NOT RECOMMENDED) Compile INDI with build_indi.sh |
+| Ubuntu 24.04 (noble)           |                | Requires INDI 2.0.8 or newer for pyindi-client<br>INDI installed from ppa:mutlaqja/ppa<br>Compile libcamera with build_libcamera.sh |
 | Ubuntu 22.04 (focal)           | aarch64        | INDI installed from ppa:mutlaqja/ppa |
 | Ubuntu 22.04                   | armhf          | Compile INDI with build_indi.sh |
 | Ubuntu 22.04                   | x86_64         | INDI installed from ppa:mutlaqja/ppa |
@@ -109,8 +139,9 @@ https://github.com/aaronwmorris/indi-allsky/wiki/FAQ
 ## INDI support
 | Version         | Note |
 | --------------- | ---- |
-| v2.0.7          |      |
-| v2.0.6          | **Recommended** |
+| v2.0.8          |      |
+| v2.0.7          | **Recommended** |
+| v2.0.6          |      |
 | v2.0.5          | Requires upgrade to indi-allsky v7.7<br>[ZWO ASI problem](https://github.com/aaronwmorris/indi-allsky/wiki/INDI-2.0.5-notes) |
 | v2.0.4          | [Typo in indibash.h prevents building pyindi-client](https://github.com/aaronwmorris/indi-allsky/wiki/INDI-2.0.4-bug)<br>Svbony support is broken |
 | v2.0.3          |      |
@@ -326,6 +357,34 @@ https://github.com/aaronwmorris/indi-allsky/wiki/Security-considerations
 It is also possible to use cloud security offerings like [Cloudflare Tunnel](https://www.cloudflare.com/products/tunnel/) to further protect your indi-allsky site.
 
 
+## Sensor support
+
+indi-allsky supports reading sensors natively on single board computers like Raspberry Pi.
+
+https://github.com/aaronwmorris/indi-allsky/wiki/Sensors
+
+
+## Dew Heater support
+
+Native dew heater support is built in for standard and PWM controlled dew heaters.
+
+https://github.com/aaronwmorris/indi-allsky/wiki/Dew-Heater-Support
+
+
+## Fan Controller support
+
+Native fan controller support is built in for standard and PWM controlled fans.
+
+https://github.com/aaronwmorris/indi-allsky/wiki/Fan-Control
+
+
+## Focuser support
+
+If you built your system with a focuser, it is now possible to control the focuser within the Focus view.  `28BYJ-48` steppers are currently supported.
+
+https://github.com/aaronwmorris/indi-allsky/wiki/Focuser-Device
+
+
 ## YouTube support
 indi-allsky supports being able to upload timlapse and star trail videos directly to YouTube
 
@@ -507,7 +566,7 @@ Please let me know if you want to make an addition or correction.
 
 * Thomas Jacquin's Allsky
     * Free, Open source
-    * Linux, SBC
+    * Linux, Single board computer
     * https://github.com/thomasjacquin/allsky
 * AllSkEye
     * Free version, Commercial option
@@ -515,15 +574,15 @@ Please let me know if you want to make an addition or correction.
     * https://allskeye.com/
 * frankAllSkyCam
     * Free, Open source
-    * Linux, SBC
+    * Linux, Single board computer
     * https://github.com/sferlix/frankAllSkyCam
 * RPi Meteor Station
     * Free, Open source
-    * Linux, SBC
+    * Linux, Single board computer
     * https://github.com/CroatianMeteorNetwork/RMS
 * Meteotux Pi
     * Free version, Commercial option
-    * Linux, SBC
+    * Linux, Single board computer
     * https://www.meteotuxpi.com/
 * UFOCapture
     * Shareware, Commercial option

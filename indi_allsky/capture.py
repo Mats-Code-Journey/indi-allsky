@@ -23,6 +23,8 @@ import queue
 from . import constants
 from . import camera as camera_module
 
+from .utils import IndiAllSkyDateCalcs
+
 from .flask.models import TaskQueueQueue
 from .flask.models import TaskQueueState
 
@@ -31,6 +33,7 @@ from .flask.models import IndiAllSkyDbImageTable
 from .flask.models import NotificationCategory
 from .flask.models import IndiAllSkyDbTaskQueueTable
 
+from .exceptions import IndiServerException
 from .exceptions import CameraException
 from .exceptions import TimeOutException
 from .exceptions import TemperatureException
@@ -59,18 +62,12 @@ class CaptureWorker(Process):
         image_q,
         video_q,
         upload_q,
-        latitude_v,
-        longitude_v,
-        elevation_v,
-        ra_v,
-        dec_v,
-        exposure_v,
-        exposure_min_v,
-        exposure_min_day_v,
-        exposure_max_v,
+        position_av,
+        exposure_av,
         gain_v,
         bin_v,
-        sensortemp_v,
+        sensors_temp_av,
+        sensors_user_av,
         night_v,
         moonmode_v,
     ):
@@ -86,24 +83,19 @@ class CaptureWorker(Process):
         self.video_q = video_q
         self.upload_q = upload_q
 
-        self.latitude_v = latitude_v
-        self.longitude_v = longitude_v
-        self.elevation_v = elevation_v
+        self.position_av = position_av  # lat, long, elev, ra, dec
 
-        self.ra_v = ra_v
-        self.dec_v = dec_v
+        self.exposure_av = exposure_av  # current, min night, min day, max
 
-        self.exposure_v = exposure_v
-        self.exposure_min_v = exposure_min_v
-        self.exposure_min_day_v = exposure_min_day_v
-        self.exposure_max_v = exposure_max_v
         self.gain_v = gain_v
         self.bin_v = bin_v
-        self.sensortemp_v = sensortemp_v
+        self.sensors_temp_av = sensors_temp_av  # 0 ccd_temp
+        self.sensors_user_av = sensors_user_av  # 0 ccd_temp
         self.night_v = night_v
         self.moonmode_v = moonmode_v
 
         self._miscDb = miscDb(self.config)
+        self._dateCalcs = IndiAllSkyDateCalcs(self.config, self.position_av)
 
         self.indiclient = None
 
@@ -115,6 +107,7 @@ class CaptureWorker(Process):
         self.camera_server = None
 
         self.indi_config = self.config.get('INDI_CONFIG_DEFAULTS', {})
+        self.reconfigure_camera = False
 
         self.focus_mode = self.config.get('FOCUS_MODE', False)  # focus mode takes images as fast as possible
 
@@ -208,6 +201,14 @@ class CaptureWorker(Process):
         check_exposure_state = time.time() + 300  # check in 5 minutes
 
 
+        next_forced_transition_time = self._dateCalcs.getNextDayNightTransition().timestamp()
+        logger.warning(
+            'Next forced transition time: %s (%0.1fh)',
+            datetime.fromtimestamp(next_forced_transition_time).strftime('%Y-%m-%d %H:%M:%S'),
+            (next_forced_transition_time - time.time()) / 3600,
+        )
+
+
         ### main loop starts
         while True:
             loop_start_time = time.time()
@@ -237,15 +238,30 @@ class CaptureWorker(Process):
 
 
             self.detectNight()
-            self.detectMoonMode()
 
 
             with app.app_context():
-                ### Change between day and night
-                if self.night_v.value != int(self.night):
+                if bool(self.night_v.value) != self.night:
+                    ### Change between day and night
+
+                    self.reconfigure_camera = True
+
+                    # update transition time
+                    next_forced_transition_time = self._dateCalcs.getNextDayNightTransition().timestamp()
+
+                    logger.warning(
+                        'Next forced transition time: %s (%0.1fh)',
+                        datetime.fromtimestamp(next_forced_transition_time).strftime('%Y-%m-%d %H:%M:%S'),
+                        (next_forced_transition_time - loop_start_time) / 3600,
+                    )
+
+
+                    dayDate = self._dateCalcs.getDayDate()
+
+
                     if not self.night and self.generate_timelapse_flag:
                         ### Generate timelapse at end of night
-                        yesterday_ref = datetime.now() - timedelta(days=1)
+                        yesterday_ref = dayDate - timedelta(days=1)
                         timespec = yesterday_ref.strftime('%Y%m%d')
                         self._generateNightTimelapse(timespec, self.camera_id)
                         self._generateNightKeogram(timespec, self.camera_id)
@@ -253,11 +269,53 @@ class CaptureWorker(Process):
 
                     elif self.night and self.generate_timelapse_flag:
                         ### Generate timelapse at end of day
-                        today_ref = datetime.now()
+                        today_ref = dayDate
                         timespec = today_ref.strftime('%Y%m%d')
                         self._generateDayTimelapse(timespec, self.camera_id)
                         self._generateDayKeogram(timespec, self.camera_id)
                         self._expireData(self.camera_id)  # cleanup old images and folders
+
+                elif self.night and bool(self.moonmode_v.value) != self.moonmode:
+                    self.reconfigure_camera = True
+
+                elif loop_start_time > next_forced_transition_time:
+                    # this should only happen when the sun never sets/rises
+
+                    self.reconfigure_camera = True
+
+                    if self.night:
+                        logger.warning('End of night reached, forcing transition to next night period')
+                    else:
+                        logger.warning('End of day reached, forcing transition to next day period')
+
+
+                    # update transition time
+                    next_forced_transition_time = self._dateCalcs.getNextDayNightTransition().timestamp()
+                    logger.warning(
+                        'Next forced transition time: %s (%0.1fh)',
+                        datetime.fromtimestamp(next_forced_transition_time).strftime('%Y-%m-%d %H:%M:%S'),
+                        (next_forced_transition_time - loop_start_time) / 3600,
+                    )
+
+
+                    dayDate = self._dateCalcs.getDayDate()
+
+
+                    if not self.night and self.generate_timelapse_flag:
+                        ### Generate timelapse at end of day
+                        yesterday_ref = dayDate - timedelta(days=1)
+                        timespec = yesterday_ref.strftime('%Y%m%d')
+                        self._generateDayTimelapse(timespec, self.camera_id)
+                        self._generateDayKeogram(timespec, self.camera_id)
+                        self._expireData(self.camera_id)  # cleanup old images and folders
+
+                    elif self.night and self.generate_timelapse_flag:
+                        ### Generate timelapse at end of night
+                        yesterday_ref = dayDate - timedelta(days=1)
+                        timespec = yesterday_ref.strftime('%Y%m%d')
+                        self._generateNightTimelapse(timespec, self.camera_id)
+                        self._generateNightKeogram(timespec, self.camera_id)
+                        self._uploadAllskyEndOfNight(self.camera_id)
 
 
                 # this is to prevent expiring images at startup
@@ -269,6 +327,13 @@ class CaptureWorker(Process):
                     self.generate_timelapse_flag = True  # indicate images have been generated for timelapse
 
 
+                #logger.warning(
+                #    'Next forced transition time: %s (%0.1fh)',
+                #    datetime.fromtimestamp(next_forced_transition_time).strftime('%Y-%m-%d %H:%M:%S'),
+                #    (next_forced_transition_time - loop_start_time) / 3600,
+                #)
+
+
                 self.getSensorTemperature()
                 self.getTelescopeRaDec()
                 self.getGpsPosition()
@@ -277,6 +342,8 @@ class CaptureWorker(Process):
                 if not self.night and not self.config['DAYTIME_CAPTURE']:
                     logger.info('Daytime capture is disabled')
                     self.generate_timelapse_flag = False
+
+                    self._miscDb.setState('STATUS', constants.STATUS_SLEEPING)
 
                     if self._shutdown:
                         logger.warning('Shutting down')
@@ -344,7 +411,7 @@ class CaptureWorker(Process):
 
                     if waiting_for_frame:
                         frame_elapsed = now - frame_start_time
-                        frame_delta = frame_elapsed - self.exposure_v.value
+                        frame_delta = frame_elapsed - self.exposure_av[0]
 
                         waiting_for_frame = False
 
@@ -352,11 +419,11 @@ class CaptureWorker(Process):
 
 
                         if frame_delta < -1:
-                            logger.error('%0.4fs EXPOSURE RECEIVED IN %0.4fs.  POSSIBLE CAMERA PROBLEM.', self.exposure_v.value, frame_elapsed)
+                            logger.error('%0.4fs EXPOSURE RECEIVED IN %0.4fs.  POSSIBLE CAMERA PROBLEM.', self.exposure_av[0], frame_elapsed)
                             self._miscDb.addNotification(
                                 NotificationCategory.CAMERA,
                                 'exposure_delta',
-                                '{0:0.1f}s exposure received in {1:0.1f}s.  Possible camera problem.'.format(self.exposure_v.value, frame_elapsed),
+                                '{0:0.1f}s exposure received in {1:0.1f}s.  Possible camera problem.'.format(self.exposure_av[0], frame_elapsed),
                                 expire=timedelta(minutes=60),
                             )
 
@@ -379,7 +446,9 @@ class CaptureWorker(Process):
 
 
                     # reconfigure if needed
-                    self.reconfigureCcd()
+                    if self.reconfigure_camera:
+                        self.reconfigureCcd()
+
 
                     # these tasks run every ~3 minutes
                     self._periodic_tasks()
@@ -417,7 +486,7 @@ class CaptureWorker(Process):
 
                         frame_start_time = now
 
-                        self.shoot(self.exposure_v.value, sync=False)
+                        self.shoot(self.exposure_av[0], sync=False)
                         camera_ready = False
                         waiting_for_frame = True
 
@@ -472,11 +541,7 @@ class CaptureWorker(Process):
         self.indiclient = camera_interface(
             self.config,
             self.image_q,
-            self.latitude_v,
-            self.longitude_v,
-            self.elevation_v,
-            self.ra_v,
-            self.dec_v,
+            self.position_av,
             self.gain_v,
             self.bin_v,
             self.night_v,
@@ -494,6 +559,8 @@ class CaptureWorker(Process):
 
             logger.error("No indiserver available at %s:%d", host, port)
 
+            self._miscDb.setState('STATUS', constants.STATUS_NOINDISERVER)
+
             self._miscDb.addNotification(
                 NotificationCategory.GENERAL,
                 'no_indiserver',
@@ -501,7 +568,8 @@ class CaptureWorker(Process):
                 expire=timedelta(hours=2),
             )
 
-            return
+            raise IndiServerException('indiserver not available')
+
 
         # give devices a chance to register
         time.sleep(8)
@@ -510,6 +578,8 @@ class CaptureWorker(Process):
             self.indiclient.findCcd(camera_name=self.config.get('INDI_CAMERA_NAME'))
         except CameraException as e:
             logger.error('Camera error: !!! %s !!!', str(e).upper())
+
+            self._miscDb.setState('STATUS', constants.STATUS_NOCAMERA)
 
             self._miscDb.addNotification(
                 NotificationCategory.CAMERA,
@@ -602,8 +672,8 @@ class CaptureWorker(Process):
                 },
                 'PROPERTIES' : {
                     'GEOGRAPHIC_COORD' : {
-                        'LAT' : self.latitude_v.value,
-                        'LONG' : self.longitude_v.value,
+                        'LAT' : self.position_av[0],
+                        'LONG' : self.position_av[1],
                     },
                 },
             }
@@ -677,9 +747,9 @@ class CaptureWorker(Process):
             'cfa'         : constants.CFA_STR_MAP[cfa_pattern],
 
             'location'    : self.config['LOCATION_NAME'],
-            'latitude'    : self.latitude_v.value,
-            'longitude'   : self.longitude_v.value,
-            'elevation'   : self.elevation_v.value,
+            'latitude'    : self.position_av[0],
+            'longitude'   : self.position_av[1],
+            'elevation'   : int(self.position_av[2]),
 
             'tz'          : str(now.astimezone().tzinfo),
             'utc_offset'  : now.astimezone().utcoffset().total_seconds(),
@@ -751,39 +821,39 @@ class CaptureWorker(Process):
 
 
         if not self.config.get('CCD_EXPOSURE_MIN_DAY'):
-            with self.exposure_min_day_v.get_lock():
-                self.exposure_min_day_v.value = ccd_min_exp
+            with self.exposure_av.get_lock():
+                self.exposure_av[2] = ccd_min_exp
         elif self.config.get('CCD_EXPOSURE_MIN_DAY') > ccd_min_exp:
-            with self.exposure_min_day_v.get_lock():
-                self.exposure_min_day_v.value = float(self.config.get('CCD_EXPOSURE_MIN_DAY'))
+            with self.exposure_av.get_lock():
+                self.exposure_av[2] = float(self.config.get('CCD_EXPOSURE_MIN_DAY'))
         elif self.config.get('CCD_EXPOSURE_MIN_DAY') < ccd_min_exp:
             logger.warning(
                 'Minimum exposure (day) %0.8f too low, increasing to %0.8f',
                 self.config.get('CCD_EXPOSURE_MIN_DAY'),
                 ccd_min_exp,
             )
-            with self.exposure_min_day_v.get_lock():
-                self.exposure_min_day_v.value = ccd_min_exp
+            with self.exposure_av.get_lock():
+                self.exposure_av[2] = ccd_min_exp
 
-        logger.info('Minimum CCD exposure: %0.8f (day)', self.exposure_min_day_v.value)
+        logger.info('Minimum CCD exposure: %0.8f (day)', self.exposure_av[2])
 
 
         if not self.config.get('CCD_EXPOSURE_MIN'):
-            with self.exposure_min_v.get_lock():
-                self.exposure_min_v.value = ccd_min_exp
+            with self.exposure_av.get_lock():
+                self.exposure_av[1] = ccd_min_exp
         elif self.config.get('CCD_EXPOSURE_MIN') > ccd_min_exp:
-            with self.exposure_min_v.get_lock():
-                self.exposure_min_v.value = float(self.config.get('CCD_EXPOSURE_MIN'))
+            with self.exposure_av.get_lock():
+                self.exposure_av[1] = float(self.config.get('CCD_EXPOSURE_MIN'))
         elif self.config.get('CCD_EXPOSURE_MIN') < ccd_min_exp:
             logger.warning(
                 'Minimum exposure (night) %0.8f too low, increasing to %0.8f',
                 self.config.get('CCD_EXPOSURE_MIN'),
                 ccd_min_exp,
             )
-            with self.exposure_min_v.get_lock():
-                self.exposure_min_v.value = ccd_min_exp
+            with self.exposure_av.get_lock():
+                self.exposure_av[1] = ccd_min_exp
 
-        logger.info('Minimum CCD exposure: %0.8f (night)', self.exposure_min_v.value)
+        logger.info('Minimum CCD exposure: %0.8f (night)', self.exposure_av[1])
 
 
         # set maximum exposure
@@ -800,11 +870,11 @@ class CaptureWorker(Process):
             maximum_exposure = ccd_max_exp
 
 
-        with self.exposure_max_v.get_lock():
-            self.exposure_max_v.value = maximum_exposure
+        with self.exposure_av.get_lock():
+            self.exposure_av[3] = maximum_exposure
 
 
-        logger.info('Maximum CCD exposure: %0.8f', self.exposure_max_v.value)
+        logger.info('Maximum CCD exposure: %0.8f', self.exposure_av[3])
 
 
         # set default exposure
@@ -826,7 +896,7 @@ class CaptureWorker(Process):
                 ccd_exposure_default = float(last_image.exposure)
                 logger.warning('Reusing last stable exposure: %0.6f', ccd_exposure_default)
             else:
-                #ccd_exposure_default = self.exposure_min_v.value
+                #ccd_exposure_default = self.exposure_av[1]
                 ccd_exposure_default = 0.01  # this should give better results for many cameras
 
 
@@ -837,10 +907,10 @@ class CaptureWorker(Process):
             ccd_exposure_default = ccd_min_exp
 
 
-        if self.exposure_v.value == -1.0:
+        if self.exposure_av[0] == -1.0:
             # only set this on first start
-            with self.exposure_v.get_lock():
-                self.exposure_v.value = ccd_exposure_default
+            with self.exposure_av.get_lock():
+                self.exposure_av[0] = ccd_exposure_default
 
 
         logger.info('Default CCD exposure: {0:0.8f}'.format(ccd_exposure_default))
@@ -907,12 +977,9 @@ class CaptureWorker(Process):
 
     def _pre_run_tasks(self):
         # Tasks that need to be run before the main program loop
-        now = time.time()
 
-
-        # Update watchdog
-        self._miscDb.setState('WATCHDOG', int(now))
-
+        # Update status
+        self._miscDb.setState('STATUS', constants.STATUS_RUNNING)
 
         if self.camera_server in ['indi_rpicam']:
             # Raspberry PI HQ Camera requires an initial throw away exposure of over 6s
@@ -949,25 +1016,34 @@ class CaptureWorker(Process):
 
 
     def getSensorTemperature(self):
-        temp_val = self.indiclient.getCcdTemperature()
+        temp_c = self.indiclient.getCcdTemperature()
 
 
         # query external temperature if defined
         if self.config.get('CCD_TEMP_SCRIPT'):
             try:
-                ext_temp_val = self.getExternalTemperature(self.config.get('CCD_TEMP_SCRIPT'))
-                temp_val = ext_temp_val
+                ext_temp_c = self.getExternalTemperature(self.config.get('CCD_TEMP_SCRIPT'))
+                temp_c = ext_temp_c
             except TemperatureException as e:
                 logger.error('Exception querying external temperature: %s', str(e))
 
 
-        temp_val_f = float(temp_val)
-
-        with self.sensortemp_v.get_lock():
-            self.sensortemp_v.value = temp_val_f
+        temp_c_float = float(temp_c)
 
 
-        return temp_val_f
+        with self.sensors_temp_av.get_lock():
+            self.sensors_temp_av[0] = temp_c_float
+
+        with self.sensors_user_av.get_lock():
+            if self.config.get('TEMP_DISPLAY') == 'f':
+                self.sensors_user_av[0] = (temp_c_float * 9.0 / 5.0) + 32
+            elif self.config.get('TEMP_DISPLAY') == 'k':
+                self.sensors_user_av[0] = temp_c_float + 273.15
+            else:
+                self.sensors_user_av[0] = temp_c_float
+
+
+        return temp_c_float
 
 
     def getExternalTemperature(self, script_path):
@@ -1074,27 +1150,23 @@ class CaptureWorker(Process):
 
 
         # need 1/10 degree difference before updating location
-        if abs(gps_lat - self.latitude_v.value) > 0.1:
+        if abs(gps_lat - self.position_av[0]) > 0.1:
             self.updateConfigLocation(gps_lat, gps_long, gps_elev)
             update_position = True
-        elif abs(gps_long - self.longitude_v.value) > 0.1:
+        elif abs(gps_long - self.position_av[1]) > 0.1:
             self.updateConfigLocation(gps_lat, gps_long, gps_elev)
             update_position = True
-        elif abs(gps_elev - self.elevation_v.value) > 30:
+        elif abs(gps_elev - self.position_av[2]) > 30:
             self.updateConfigLocation(gps_lat, gps_long, gps_elev)
             update_position = True
 
 
         if update_position:
             # Update shared values
-            with self.latitude_v.get_lock():
-                self.latitude_v.value = float(gps_lat)
-
-            with self.longitude_v.get_lock():
-                self.longitude_v.value = float(gps_long)
-
-            with self.elevation_v.get_lock():
-                self.elevation_v.value = int(gps_elev)
+            with self.position_av.get_lock():
+                self.position_av[0] = float(gps_lat)
+                self.position_av[1] = float(gps_long)
+                self.position_av[2] = float(gps_elev)
 
 
             self.reparkTelescope()
@@ -1110,11 +1182,9 @@ class CaptureWorker(Process):
         ra, dec = self.indiclient.getTelescopeRaDec()
 
         # Update shared values
-        with self.ra_v.get_lock():
-            self.ra_v.value = ra
-
-        with self.dec_v.get_lock():
-            self.dec_v.value = dec
+        with self.position_av.get_lock():
+            self.position_av[3] = ra
+            self.position_av[4] = dec
 
 
         return ra, dec
@@ -1131,6 +1201,7 @@ class CaptureWorker(Process):
         task_setlocation = IndiAllSkyDbTaskQueueTable(
             queue=TaskQueueQueue.MAIN,
             state=TaskQueueState.MANUAL,
+            priority=100,
             data={
                 'action'      : 'setlocation',
                 'camera_id'   : self.camera_id,
@@ -1149,19 +1220,15 @@ class CaptureWorker(Process):
             return
 
         self.indiclient.unparkTelescope()
-        self.indiclient.setTelescopeParkPosition(0.0, self.latitude_v.value)
+        self.indiclient.setTelescopeParkPosition(0.0, self.position_av[0])
         self.indiclient.parkTelescope()
 
 
     def reconfigureCcd(self):
-
-        if self.night_v.value != int(self.night):
-            pass
-        elif self.night and bool(self.moonmode_v.value) != bool(self.moonmode):
-            pass
-        else:
-            # No need to reconfigure
+        if not self.reconfigure_camera:
             return
+
+        self.reconfigure_camera = False
 
 
         if self.night:
@@ -1199,7 +1266,8 @@ class CaptureWorker(Process):
         self.indiclient.configureCcdDevice(self.indi_config)
 
 
-        # Update shared values
+        ### Update shared values
+        # These need to be updated in the capture process to indicate the real state of the camera
         with self.night_v.get_lock():
             self.night_v.value = int(self.night)
 
@@ -1207,36 +1275,32 @@ class CaptureWorker(Process):
             self.moonmode_v.value = int(self.moonmode)
 
 
-
     def detectNight(self):
         obs = ephem.Observer()
-        obs.lon = math.radians(self.longitude_v.value)
-        obs.lat = math.radians(self.latitude_v.value)
-        obs.elevation = self.elevation_v.value
+        obs.lon = math.radians(self.position_av[1])
+        obs.lat = math.radians(self.position_av[0])
+        obs.elevation = self.position_av[2]
+
+        # disable atmospheric refraction calcs
+        obs.pressure = 0
+
         obs.date = datetime.now(tz=timezone.utc)  # ephem expects UTC dates
 
         sun = ephem.Sun()
+        moon = ephem.Moon()
+
         sun.compute(obs)
+        moon.compute(obs)
 
-        logger.info('Sun altitude: %s', sun.alt)
-
+        # Night
+        logger.info('Sun altitude: %0.1f', math.degrees(sun.alt))
         self.night = sun.alt < self.night_sun_radians  # boolean
 
 
-    def detectMoonMode(self):
-        # detectNight() should be run first
-        obs = ephem.Observer()
-        obs.lon = math.radians(self.longitude_v.value)
-        obs.lat = math.radians(self.latitude_v.value)
-        obs.elevation = self.elevation_v.value
-        obs.date = datetime.now(tz=timezone.utc)  # ephem expects UTC dates
-
-        moon = ephem.Moon()
-        moon.compute(obs)
-
+        # Moonmode
         moon_phase = moon.moon_phase * 100.0
 
-        logger.info('Moon altitude: %s, phase %0.1f%%', moon.alt, moon_phase)
+        logger.info('Moon altitude: %0.1f, phase %0.1f%%', math.degrees(moon.alt), moon_phase)
         if self.night:
             if moon.alt >= self.night_moonmode_radians:
                 if moon_phase >= self.config['NIGHT_MOONMODE_PHASE']:
@@ -1258,14 +1322,11 @@ class CaptureWorker(Process):
             .one()
 
 
-        img_day_folder = self.image_dir.joinpath('ccd_{0:s}'.format(camera.uuid), '{0:s}'.format(timespec), 'day')
-
         logger.warning('Generating day time timelapse for %s camera %d', timespec, camera.id)
 
         video_jobdata = {
             'action'      : 'generateVideo',
             'timespec'    : timespec,
-            'img_folder'  : str(img_day_folder),
             'night'       : False,
             'camera_id'   : camera.id,
         }
@@ -1285,7 +1346,6 @@ class CaptureWorker(Process):
             panorama_video_jobdata = {
                 'action'      : 'generatePanoramaVideo',
                 'timespec'    : timespec,
-                'img_folder'  : str(img_day_folder),
                 'night'       : False,
                 'camera_id'   : camera.id,
             }
@@ -1312,14 +1372,11 @@ class CaptureWorker(Process):
             .one()
 
 
-        img_day_folder = self.image_dir.joinpath('ccd_{0:s}'.format(camera.uuid), '{0:s}'.format(timespec), 'night')
-
         logger.warning('Generating night time timelapse for %s camera %d', timespec, camera.id)
 
         video_jobdata = {
             'action'      : 'generateVideo',
             'timespec'    : timespec,
-            'img_folder'  : str(img_day_folder),
             'night'       : True,
             'camera_id'   : camera.id,
         }
@@ -1339,7 +1396,6 @@ class CaptureWorker(Process):
             panorama_video_jobdata = {
                 'action'      : 'generatePanoramaVideo',
                 'timespec'    : timespec,
-                'img_folder'  : str(img_day_folder),
                 'night'       : True,
                 'camera_id'   : camera.id,
             }
@@ -1366,14 +1422,11 @@ class CaptureWorker(Process):
             .one()
 
 
-        img_day_folder = self.image_dir.joinpath('ccd_{0:s}'.format(camera.uuid), '{0:s}'.format(timespec), 'night')
-
         logger.warning('Generating night time keogram for %s camera %d', timespec, camera.id)
 
         jobdata = {
             'action'      : 'generateKeogramStarTrails',
             'timespec'    : timespec,
-            'img_folder'  : str(img_day_folder),
             'night'       : True,
             'camera_id'   : camera.id,
         }
@@ -1400,14 +1453,11 @@ class CaptureWorker(Process):
             .one()
 
 
-        img_day_folder = self.image_dir.joinpath('ccd_{0:s}'.format(camera.uuid), '{0:s}'.format(timespec), 'day')
-
         logger.warning('Generating day time keogram for %s camera %d', timespec, camera.id)
 
         jobdata = {
             'action'      : 'generateKeogramStarTrails',
             'timespec'    : timespec,
-            'img_folder'  : str(img_day_folder),
             'night'       : False,
             'camera_id'   : camera.id,
         }
@@ -1457,7 +1507,6 @@ class CaptureWorker(Process):
         # This will delete old images from the filesystem and DB
         jobdata = {
             'action'       : 'uploadAllskyEndOfNight',
-            'img_folder'   : str(self.image_dir),  # not needed
             'timespec'     : None,  # Not needed
             'night'        : True,
             'camera_id'    : camera.id,
@@ -1484,7 +1533,6 @@ class CaptureWorker(Process):
         # This will delete old images from the filesystem and DB
         jobdata = {
             'action'       : 'expireData',
-            'img_folder'   : str(self.image_dir),
             'timespec'     : None,  # Not needed
             'night'        : None,  # Not needed
             'camera_id'    : camera.id,
@@ -1499,5 +1547,4 @@ class CaptureWorker(Process):
         db.session.commit()
 
         self.video_q.put({'task_id' : task.id})
-
 

@@ -128,7 +128,10 @@ class IndiClientLibCameraGeneric(IndiClient):
         if self.active_exposure:
             return
 
+
+        libcamera_camera_id = self.config.get('LIBCAMERA', {}).get('CAMERA_ID', 0)
         image_type = self.config.get('LIBCAMERA', {}).get('IMAGE_FILE_TYPE', 'dng')
+
 
         if image_type == 'dng' and self.memory_total_mb <= 768:
             logger.warning('*** Capturing raw images (dng) with libcamera and less than 1gb of memory can result in out-of-memory errors ***')
@@ -167,6 +170,7 @@ class IndiClientLibCameraGeneric(IndiClient):
                 self.ccd_device.driver_exec,
                 '--immediate',
                 '--nopreview',
+                '--camera', '{0:d}'.format(libcamera_camera_id),
                 '--raw',
                 '--denoise', 'off',
                 '--gain', '{0:d}'.format(self.gain_v.value),
@@ -180,6 +184,7 @@ class IndiClientLibCameraGeneric(IndiClient):
                 self.ccd_device.driver_exec,
                 '--immediate',
                 '--nopreview',
+                '--camera', '{0:d}'.format(libcamera_camera_id),
                 '--encoding', '{0:s}'.format(image_type),
                 '--quality', '95',
                 '--gain', '{0:d}'.format(self.gain_v.value),
@@ -342,9 +347,9 @@ class IndiClientLibCameraGeneric(IndiClient):
         try:
             self._temp_val = float(metadata_dict[self._sensor_temp_metadata_key])
         except KeyError:
-            logger.error('libcamera sensor temperature key not found')
+            logger.error('libcamera camera temperature key not found')
         except ValueError:
-            logger.error('Unable to parse libcamera sensor temperature')
+            logger.error('Unable to parse libcamera camera temperature')
 
 
         ### Auto white balance
@@ -793,6 +798,33 @@ class IndiClientLibCamera64mpHawkeye(IndiClientLibCameraGeneric):
         }
 
 
+class IndiClientLibCameraOv64a40OwlSight(IndiClientLibCameraGeneric):
+
+    def __init__(self, *args, **kwargs):
+        super(IndiClientLibCameraOv64a40OwlSight, self).__init__(*args, **kwargs)
+
+        self.ccd_device_name = 'libcamera_64mp_owlsight'
+
+        self.camera_info = {
+            'width'         : 9152,
+            'height'        : 6944,
+            'pixel'         : 1.008,
+            'min_gain'      : 1,
+            'max_gain'      : 16,  # verified
+            'min_exposure'  : 0.0001,
+            'max_exposure'  : 200.0,  # capable of more
+            'cfa'           : 'RGGB',  # unverified
+            'bit_depth'     : 16,
+        }
+
+        self._binmode_options = {
+            1 : '',
+            #1 : '--mode 9152:6944',  # unverified
+            #2 : '--mode 4624:3472',
+            #4 : '--mode 2312:1736',
+        }
+
+
 class IndiClientLibCameraImx708(IndiClientLibCameraGeneric):
 
     def __init__(self, *args, **kwargs):
@@ -861,7 +893,7 @@ class IndiClientLibCameraImx290(IndiClientLibCameraGeneric):
             'max_gain'      : 16,  # unverified
             'min_exposure'  : 0.0001,
             'max_exposure'  : 200.0,
-            'cfa'           : 'GRGB',
+            'cfa'           : 'GRBG',
             'bit_depth'     : 16,
         }
 
@@ -895,5 +927,29 @@ class IndiClientLibCameraImx462(IndiClientLibCameraGeneric):
             #1 : '--mode 1920:1080:12',
             1 : '',
             2 : '--mode 1280:720:12',  # cropped
+        }
+
+
+class IndiClientLibCameraImx298(IndiClientLibCameraGeneric):
+
+    def __init__(self, *args, **kwargs):
+        super(IndiClientLibCameraImx298, self).__init__(*args, **kwargs)
+
+        self.ccd_device_name = 'libcamera_imx298'
+
+        self.camera_info = {
+            'width'         : 4640,
+            'height'        : 3472,
+            'pixel'         : 1.12,
+            'min_gain'      : 1,
+            'max_gain'      : 16,  # unverified
+            'min_exposure'  : 0.0001,
+            'max_exposure'  : 200.0,
+            'cfa'           : 'RGGB',  # unverified
+            'bit_depth'     : 16,
+        }
+
+        self._binmode_options = {
+            1 : '',
         }
 

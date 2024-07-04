@@ -11,6 +11,7 @@ export PATH
 function catch_error() {
     echo
     echo
+    echo "\`\`\`"  # markdown
     echo "###############"
     echo "###  ERROR  ###"
     echo "###############"
@@ -25,6 +26,7 @@ trap catch_error ERR
 function catch_sigint() {
     echo
     echo
+    echo "\`\`\`"  # markdown
     echo "###############"
     echo "###  ERROR  ###"
     echo "###############"
@@ -76,7 +78,7 @@ cd "$OLDPWD"
 
 
 # go ahead and prompt for password
-sudo true
+#sudo true
 
 
 echo "#################################"
@@ -101,6 +103,14 @@ echo
 uname -a
 
 echo
+echo "Time"
+date
+
+echo
+echo "System timezone"
+cat /etc/timezone || true
+
+echo
 echo "Uptime"
 uptime
 
@@ -114,7 +124,7 @@ df -k
 
 echo
 echo "sysctl info"
-sudo sysctl vm.swappiness
+/usr/sbin/sysctl vm.swappiness
 
 echo
 echo "system python: $(python3 -V)"
@@ -129,6 +139,9 @@ if [ -f "/etc/astroberry.version" ]; then
     echo
 fi
 
+echo
+echo "IP Info"
+ip address
 
 echo
 echo "User info"
@@ -249,6 +262,25 @@ if [ -d "${ALLSKY_DIRECTORY}/virtualenv/indi-allsky" ]; then
     echo
     echo "virtualenv python modules"
     pip freeze
+
+    echo "\`\`\`"  # markdown
+
+    echo
+    echo "indi-allsky config (passwords redacted)"
+    INDI_ALLSKY_CONFIG=$("${ALLSKY_DIRECTORY}/config.py" dump)
+
+
+    # reduce lat/long precision
+    LOCATION_LATITUDE=$(echo "$INDI_ALLSKY_CONFIG" | jq -r '.LOCATION_LATITUDE')
+    LOCATION_LONGITUDE=$(echo "$INDI_ALLSKY_CONFIG" | jq -r '.LOCATION_LONGITUDE')
+
+    INDI_ALLSKY_CONFIG=$(echo "$INDI_ALLSKY_CONFIG" | jq --argjson lat "$(printf '%0.0f' "$LOCATION_LATITUDE")" --argjson long "$(printf '%0.0f' "$LOCATION_LONGITUDE")" '.LOCATION_LATITUDE = $lat | .LOCATION_LONGITUDE = $long')
+
+
+    echo "\`\`\`json"  # markdown
+    # Remove all secrets from config
+    echo "$INDI_ALLSKY_CONFIG" | jq --arg redacted "REDACTED" '.FILETRANSFER.PASSWORD = $redacted | .FILETRANSFER.PASSWORD_E = $redacted | .S3UPLOAD.SECRET_KEY = $redacted | .S3UPLOAD.SECRET_KEY_E = $redacted | .MQTTPUBLISH.PASSWORD = $redacted | .MQTTPUBLISH.PASSWORD_E = $redacted | .SYNCAPI.APIKEY = $redacted | .SYNCAPI.APIKEY_E = $redacted | .PYCURL_CAMERA.PASSWORD = $redacted | .PYCURL_CAMERA.PASSWORD_E = $redacted | .TEMP_SENSOR.OPENWEATHERMAP_APIKEY = $redacted | .TEMP_SENSOR.OPENWEATHERMAP_APIKEY_E = $redacted | .TEMP_SENSOR.MQTT_PASSWORD = $redacted | .TEMP_SENSOR.MQTT_PASSWORD_E = $redacted'
+
     deactivate
     echo
 else

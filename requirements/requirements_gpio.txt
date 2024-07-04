@@ -1,0 +1,20 @@
+Adafruit-Blinka
+gpiod
+pyserial
+adafruit-circuitpython-dht
+adafruit-circuitpython-bme280
+adafruit-circuitpython-bme680
+circuitpython-bmp180
+adafruit-circuitpython-si7021
+adafruit-circuitpython-sht4x
+adafruit-circuitpython-mlx90614
+adafruit-circuitpython-tsl2591
+adafruit-circuitpython-tsl2561
+adafruit-circuitpython-bh1750
+adafruit-circuitpython-ads1x15
+
+### does not work on raspi
+#adafruit-circuitpython-ds18x20
+
+### Rpi5
+#rpi-lgpio

@@ -58,6 +58,11 @@ class StarTrailGenerator(object):
         self.sun = ephem.Sun()
         self.moon = ephem.Moon()
 
+
+        # disable atmospheric refraction calcs
+        self.obs.pressure = 0
+
+
         self.image_processing_elapsed_s = 0
 
         self._sqm_mask = mask
@@ -493,11 +498,6 @@ class StarTrailGenerator(object):
         degrees, minutes = divmod(minutes, 60)
         degrees = degrees if is_positive else -degrees
         return degrees, minutes, seconds
-
-
-    def cleanup(self):
-        # cleanup the folder
-        self.timelapse_tmpdir.cleanup()
 
 
     def _generateSqmMask(self, img):

@@ -1,5 +1,7 @@
 import platform
 import sys
+import fcntl
+#import errno
 import os
 import time
 import io
@@ -15,6 +17,7 @@ import logging
 import queue
 from multiprocessing import Queue
 from multiprocessing import Value
+from multiprocessing import Array
 
 from .version import __version__
 from .version import __config_level__
@@ -67,6 +70,8 @@ class IndiAllSky(object):
     def __init__(self):
         self.name = 'Main'
 
+        self.pid_lock = None
+
         with app.app_context():
             try:
                 self._config_obj = IndiAllSkyConfig()
@@ -109,20 +114,45 @@ class IndiAllSky(object):
         self.sat_data_tasks_time = time.time()  # run asap
 
 
-        self.latitude_v = Value('f', float(self.config['LOCATION_LATITUDE']))
-        self.longitude_v = Value('f', float(self.config['LOCATION_LONGITUDE']))
-        self.elevation_v = Value('i', int(self.config.get('LOCATION_ELEVATION', 300)))
+        self.position_av = Array('f', [
+            float(self.config['LOCATION_LATITUDE']),
+            float(self.config['LOCATION_LONGITUDE']),
+            float(self.config.get('LOCATION_ELEVATION', 300)),
+            0.0,  # Ra
+            0.0,  # Dec
+        ])
 
-        self.ra_v = Value('f', 0.0)
-        self.dec_v = Value('f', 0.0)
 
-        self.exposure_v = Value('f', -1.0)  # this must be -1.0 to indicate unset
-        self.exposure_min_v = Value('f', -1.0)
-        self.exposure_min_day_v = Value('f', -1.0)
-        self.exposure_max_v = Value('f', -1.0)
+        ### temperature values in this array should always be in Celcius
+        # 0 ccd temp
+        # 1-9 reserved for future use
+        # 10-29 system temperatures
+        self.sensors_temp_av = Array('f', [0.0 for x in range(30)])
+
+        # sensors (temp, humidity, wind, sqm, etc)
+        # 0 ccd temp
+        # 1 dew heater level
+        # 2 dew point
+        # 3 frost point
+        # 4 fan level
+        # 5 heat index
+        # 6 wind direction in degrees
+        # 7 sqm
+        # 8-9 reserved for future use
+        self.sensors_user_av = Array('f', [0.0 for x in range(30)])
+
+        self.exposure_av = Array('f', [
+            -1.0,  # current exposure - these must be -1.0 to indicate unset
+            -1.0,  # night minimum
+            -1.0,  # day minimum
+            -1.0,  # maximum
+        ])
+
         self.gain_v = Value('i', -1)  # value set in CCD config
         self.bin_v = Value('i', 1)  # set 1 for sane default
-        self.sensortemp_v = Value('f', 0)
+
+
+        # These shared values are to indicate when the camera is in night/moon modes
         self.night_v = Value('i', -1)  # bogus initial value
         self.moonmode_v = Value('i', -1)  # bogus initial value
 
@@ -141,6 +171,10 @@ class IndiAllSky(object):
         self.video_error_q = Queue()
         self.video_worker = None
         self.video_worker_idx = 0
+
+        self.sensor_worker = None
+        self.sensor_error_q = Queue()
+        self.sensor_worker_idx = 0
 
         self.upload_q = Queue()
         self.upload_worker_list = []
@@ -220,11 +254,27 @@ class IndiAllSky(object):
 
         self.pid_file.chmod(0o644)
 
+        try:
+            self.pid_lock = io.open(self.pid_file, 'w+')
+            fcntl.flock(self.pid_lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            logger.error('Failed to get lock, indi-allsky may already be running')
+            sys.exit(1)
+        except PermissionError as e:
+            logger.error('Failed to get lock: %s', e.strerror)
+            sys.exit(1)
+
+
         self._miscDb.setState('PID', pid)
         self._miscDb.setState('PID_FILE', self.pid_file)
 
 
     def _startup(self):
+        now = time.time()
+
+        self._miscDb.setState('WATCHDOG', int(now))
+        self._miscDb.setState('STATUS', constants.STATUS_STARTING)
+
         logger.info('indi-allsky release: %s', str(__version__))
         logger.info('indi-allsky config level: %s', str(__config_level__))
 
@@ -296,18 +346,12 @@ class IndiAllSky(object):
             self.image_q,
             self.video_q,
             self.upload_q,
-            self.latitude_v,
-            self.longitude_v,
-            self.elevation_v,
-            self.ra_v,
-            self.dec_v,
-            self.exposure_v,
-            self.exposure_min_v,
-            self.exposure_min_day_v,
-            self.exposure_max_v,
+            self.position_av,
+            self.exposure_av,
             self.gain_v,
             self.bin_v,
-            self.sensortemp_v,
+            self.sensors_temp_av,
+            self.sensors_user_av,
             self.night_v,
             self.moonmode_v,
         )
@@ -355,18 +399,12 @@ class IndiAllSky(object):
             self.image_error_q,
             self.image_q,
             self.upload_q,
-            self.latitude_v,
-            self.longitude_v,
-            self.elevation_v,
-            self.ra_v,
-            self.dec_v,
-            self.exposure_v,
-            self.exposure_min_v,
-            self.exposure_min_day_v,
-            self.exposure_max_v,
+            self.position_av,
+            self.exposure_av,
             self.gain_v,
             self.bin_v,
-            self.sensortemp_v,
+            self.sensors_temp_av,
+            self.sensors_user_av,
             self.night_v,
             self.moonmode_v,
         )
@@ -426,9 +464,6 @@ class IndiAllSky(object):
             self.video_error_q,
             self.video_q,
             self.upload_q,
-            self.latitude_v,
-            self.longitude_v,
-            self.elevation_v,
             self.bin_v,
         )
         self.video_worker.start()
@@ -460,6 +495,60 @@ class IndiAllSky(object):
 
         self.video_q.put({'stop' : True})
         self.video_worker.join()
+
+
+    def _startSensorWorker(self):
+        from .sensor import SensorWorker
+
+        if self.sensor_worker:
+            if self.sensor_worker.is_alive():
+                return
+
+
+            try:
+                sensor_error, sensor_traceback = self.sensor_error_q.get_nowait()
+                for line in sensor_traceback.split('\n'):
+                    logger.error('Sensor worker exception: %s', line)
+            except queue.Empty:
+                pass
+
+
+        self.sensor_worker_idx += 1
+
+        logger.info('Starting Sensor-%d worker', self.sensor_worker_idx)
+        self.sensor_worker = SensorWorker(
+            self.sensor_worker_idx,
+            self.config,
+            self.sensor_error_q,
+            self.sensors_temp_av,
+            self.sensors_user_av,
+            self.night_v,
+        )
+        self.sensor_worker.start()
+
+
+        if self.sensor_worker_idx % 10 == 0:
+            # notify if worker is restarted more than 10 times
+            with app.app_context():
+                self._miscDb.addNotification(
+                    NotificationCategory.WORKER,
+                    'SensorWorker',
+                    'WARNING: SensorWorker was restarted more than 10 times',
+                    expire=timedelta(hours=2),
+                )
+
+
+    def _stopSensorWorker(self):
+        if not self.sensor_worker:
+            return
+
+        if not self.sensor_worker.is_alive():
+            return
+
+        logger.info('Stopping Sensor worker')
+
+        self.sensor_worker.stop()
+        self.sensor_worker.join()
 
 
     def _startFileUploadWorkers(self):
@@ -546,14 +635,17 @@ class IndiAllSky(object):
             self._startup()
 
 
-
-
         while True:
             if self._shutdown:
+                with app.app_context():
+                    self._miscDb.setState('STATUS', constants.STATUS_STOPPING)
+
+
                 logger.warning('Shutting down')
                 self._stopCaptureWorker()  # stop this first so image queue is cleared out
                 self._stopImageWorker()
                 self._stopVideoWorker()
+                self._stopSensorWorker()
                 self._stopFileUploadWorkers()
 
 
@@ -565,6 +657,11 @@ class IndiAllSky(object):
                         expire=timedelta(hours=1),
                     )
 
+                    self._miscDb.setState('STATUS', constants.STATUS_STOPPED)
+
+
+                if self.pid_lock:
+                    fcntl.flock(self.pid_lock, fcntl.LOCK_UN)
 
                 sys.exit()
 
@@ -575,6 +672,7 @@ class IndiAllSky(object):
                 self._stopCaptureWorker()  # stop this first so image queue is cleared out
                 self._stopImageWorker()
                 self._stopVideoWorker()
+                self._stopSensorWorker()
                 self._stopFileUploadWorkers()
                 # processes will start at the next loop
 
@@ -589,6 +687,7 @@ class IndiAllSky(object):
             self._startCaptureWorker()
             self._startImageWorker()
             self._startVideoWorker()
+            self._startSensorWorker()
             self._startFileUploadWorkers()
 
 
@@ -630,7 +729,6 @@ class IndiAllSky(object):
         # This will delete old images from the filesystem and DB
         jobdata = {
             'action'       : 'systemHealthCheck',
-            'img_folder'   : str(self.image_dir),  # not needed
             'timespec'     : None,  # Not needed
             'night'        : None,  # Not needed
             'camera_id'    : None,  # Not needed
@@ -1120,7 +1218,10 @@ class IndiAllSky(object):
                     IndiAllSkyDbTaskQueueTable.queue == TaskQueueQueue.UPLOAD,
                 )
             )\
-            .order_by(IndiAllSkyDbTaskQueueTable.createDate.asc())
+            .order_by(
+                IndiAllSkyDbTaskQueueTable.priority.asc(),  # lower value, higher priority
+                IndiAllSkyDbTaskQueueTable.createDate.asc(),
+            )
 
 
         reload_received = False
@@ -1241,7 +1342,6 @@ class IndiAllSky(object):
         for camera in active_cameras:
             jobdata = {
                 'action'       : 'updateAuroraData',
-                'img_folder'   : str(self.image_dir),
                 'timespec'     : None,  # Not needed
                 'night'        : None,  # Not needed
                 'camera_id'    : camera.id,
@@ -1268,7 +1368,6 @@ class IndiAllSky(object):
         for camera in active_cameras:
             jobdata = {
                 'action'       : 'updateSmokeData',
-                'img_folder'   : str(self.image_dir),
                 'timespec'     : None,  # Not needed
                 'night'        : None,  # Not needed
                 'camera_id'    : camera.id,
@@ -1288,7 +1387,6 @@ class IndiAllSky(object):
     def _updateSatelliteTleData(self, task_state=TaskQueueState.QUEUED):
         jobdata = {
             'action'       : 'updateSatelliteTleData',
-            'img_folder'   : str(self.image_dir),
             'timespec'     : None,  # Not needed
             'night'        : None,  # Not needed
             'camera_id'    : None,  # Not needed

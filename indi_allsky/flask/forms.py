@@ -72,6 +72,7 @@ def CAMERA_INTERFACE_validator(form, field):
         'libcamera_imx219',
         'libcamera_imx519',
         'libcamera_64mp_hawkeye',
+        'libcamera_64mp_owlsight',
         'libcamera_imx708',
         'libcamera_imx296_gs',
         'libcamera_imx290',
@@ -240,6 +241,17 @@ def EXPOSURE_PERIOD_DAY_validator(form, field):
         raise ValidationError('Exposure period must be 1.0 or more')
 
 
+def TIMELAPSE_SKIP_FRAMES_validator(form, field):
+    if not isinstance(field.data, int):
+        raise ValidationError('Please enter valid number')
+
+    if field.data < 0:
+        raise ValidationError('Skip frames must 0 or more')
+
+    if field.data > 10:
+        raise ValidationError('Skip frames must 10 or less')
+
+
 def CCD_BIT_DEPTH_validator(form, field):
     if int(field.data) not in (0, 8, 10, 12, 14, 16):
         raise ValidationError('Bits must be 0, 8, 10, 12, 14, or 16 ')
@@ -304,6 +316,11 @@ def SCNR_ALGORITHM_validator(form, field):
 def TEMP_DISPLAY_validator(form, field):
     if field.data not in ('c', 'f', 'k'):
         raise ValidationError('Please select the temperature system for display')
+
+
+def PRESSURE_DISPLAY_validator(form, field):
+    if field.data not in ('hPa', 'psi', 'inHg', 'mmHg'):
+        raise ValidationError('Please select the pressure system for display')
 
 
 def CCD_TEMP_SCRIPT_validator(form, field):
@@ -617,7 +634,20 @@ def IMAGE_LABEL_TEMPLATE_validator(form, field):
         'stretch' : 'Off',
         'stretch_m1_gamma' : 0.0,
         'stretch_m1_stddevs' : 0.0,
+        'dew_heater_status' : '',
+        'fan_status' : '',
+        'wind_dir' : '',
     }
+
+
+    for x in range(30):
+        # temperature sensors
+        test_data['sensor_temp_{0:d}'.format(x)] = 0.0
+
+    for x in range(30):
+        # other sensors
+        test_data['sensor_user_{0:d}'.format(x)] = 0.0
+
 
     try:
         field.data.format(**test_data)
@@ -1271,6 +1301,15 @@ def FFMPEG_CODEC_validator(form, field):
         raise ValidationError('Invalid codec option')
 
 
+def FFMPEG_EXTRA_OPTIONS_validator(form, field):
+    if not field.data:
+        return
+
+    options_regex = r'^[a-zA-Z0-9_\.\-\:\/\ ]+$'
+    if not re.search(options_regex, field.data):
+        raise ValidationError('Invalid characters')
+
+
 def TEXT_PROPERTIES__FONT_FACE_validator(form, field):
     fonts = (
         'FONT_HERSHEY_SIMPLEX',
@@ -1407,8 +1446,22 @@ def ORB_PROPERTIES__MODE_validator(form, field):
 
 
 def ORB_PROPERTIES__RADIUS_validator(form, field):
+    if not isinstance(field.data, int):
+        raise ValidationError('Please enter valid number')
+
     if field.data < 1:
         raise ValidationError('Orb radius must be 1 or more')
+
+
+def ORB_PROPERTIES__AZ_OFFSET_validator(form, field):
+    if not isinstance(field.data, (int, float)):
+        raise ValidationError('Please enter valid number')
+
+    if field.data < -180:
+        raise ValidationError('Azimuth Offset must be greater than -180')
+
+    if field.data > 180:
+        raise ValidationError('Azimuth Offset must be less than 180')
 
 
 def UPLOAD_WORKERS_validator(form, field):
@@ -2036,6 +2089,19 @@ def LIBCAMERA__AWB_validator(form, field):
         raise ValidationError('Please select a valid AWB')
 
 
+def LIBCAMERA__CAMERA_ID_validator(form, field):
+    try:
+        camera_id = int(field.data)
+    except ValueError:
+        raise ValidationError('Please enter a valid number')
+
+    if camera_id < 0:
+        raise ValidationError('Invalid camera id')
+
+    if camera_id > 4:
+        raise ValidationError('Invalid camera id')
+
+
 def LIBCAMERA__EXTRA_OPTIONS_validator(form, field):
     if not field.data:
         return
@@ -2048,6 +2114,220 @@ def LIBCAMERA__EXTRA_OPTIONS_validator(form, field):
 def PYCURL_CAMERA__URL_validator(form, field):
     if not field.data:
         return
+
+
+def PYCURL_CAMERA__IMAGE_FILE_TYPE_validator(form, field):
+    if field.data not in ('jpg', 'png'):
+        raise ValidationError('Please select a valid file type')
+
+
+def FOCUSER__CLASSNAME_validator(form, field):
+    if not field.data:
+        return
+
+    class_regex = r'^[a-zA-Z0-9_\-]+$'
+
+    if not re.search(class_regex, field.data):
+        raise ValidationError('Invalid class syntax')
+
+
+def DEW_HEATER__CLASSNAME_validator(form, field):
+    if not field.data:
+        return
+
+    class_regex = r'^[a-zA-Z0-9_\-]+$'
+
+    if not re.search(class_regex, field.data):
+        raise ValidationError('Invalid class syntax')
+
+
+def DEW_HEATER__LEVEL_validator(form, field):
+    if not isinstance(field.data, int):
+        raise ValidationError('Please enter a valid number')
+
+    if field.data < 0:
+        raise ValidationError('Level must be 0 or greater')
+
+    if field.data > 100:
+        raise ValidationError('Level must be 100 or less')
+
+
+def DEW_HEATER__THOLD_DIFF_validator(form, field):
+    if not isinstance(field.data, int):
+        raise ValidationError('Please enter a valid number')
+
+    if field.data < 0:
+        raise ValidationError('Threshold difference must be 0 or greater')
+
+
+def DEW_HEATER__MANUAL_TARGET_validator(form, field):
+    if not isinstance(field.data, (int, float)):
+        raise ValidationError('Please enter a valid number')
+
+
+def FAN__CLASSNAME_validator(form, field):
+    if not field.data:
+        return
+
+    class_regex = r'^[a-zA-Z0-9_\-]+$'
+
+    if not re.search(class_regex, field.data):
+        raise ValidationError('Invalid class syntax')
+
+
+def FAN__LEVEL_validator(form, field):
+    if not isinstance(field.data, int):
+        raise ValidationError('Please enter a valid number')
+
+    if field.data < 0:
+        raise ValidationError('Level must be 0 or greater')
+
+    if field.data > 100:
+        raise ValidationError('Level must be 100 or less')
+
+
+def FAN__THOLD_DIFF_validator(form, field):
+    if not isinstance(field.data, int):
+        raise ValidationError('Please enter a valid number')
+
+    if field.data < 0:
+        raise ValidationError('Threshold difference must be 0 or greater')
+
+
+def FAN__TARGET_validator(form, field):
+    if not isinstance(field.data, (int, float)):
+        raise ValidationError('Please enter a valid number')
+
+
+def GENERIC_GPIO__CLASSNAME_validator(form, field):
+    if not field.data:
+        return
+
+    class_regex = r'^[a-zA-Z0-9_\-]+$'
+
+    if not re.search(class_regex, field.data):
+        raise ValidationError('Invalid class syntax')
+
+
+def TEMP_SENSOR__CLASSNAME_validator(form, field):
+    if not field.data:
+        return
+
+    class_regex = r'^[a-zA-Z0-9_\-]+$'
+
+    if not re.search(class_regex, field.data):
+        raise ValidationError('Invalid class syntax')
+
+
+def TEMP_SENSOR__LABEL_validator(form, field):
+    pass
+
+
+def TEMP_SENSOR__I2C_ADDRESS_validator(form, field):
+    try:
+        int(field.data, 16)
+    except ValueError as e:
+        raise ValidationError('Invalid HEX address: {0:s}'.format(str(e)))
+
+
+def TEMP_SENSOR__OPENWEATHERMAP_APIKEY_validator(form, field):
+    pass
+
+
+def SENSOR_SLOT_validator(form, field):
+    try:
+        slot_i = int(field.data)
+    except ValueError as e:
+        raise ValidationError('ValueError: {0:s}'.format(str(e)))
+
+
+    if slot_i < 0:
+        raise ValidationError('Slot must be 0 or greater')
+
+
+def SENSOR_USER_VAR_SLOT_validator(form, field):
+    try:
+        slot_i = int(field.data)
+    except ValueError as e:
+        raise ValidationError('ValueError: {0:s}'.format(str(e)))
+
+
+    if slot_i < 0:
+        raise ValidationError('Slot must be 0 or greater')
+
+    if slot_i > 30:
+        raise ValidationError('Slot must be less than 30')
+
+
+def DEVICE_PIN_NAME_validator(form, field):
+    if not field.data:
+        return
+
+
+    class_regex = r'^[a-zA-Z0-9_,\-\/]+$'
+
+    if not re.search(class_regex, field.data):
+        raise ValidationError('Invalid PIN name')
+
+
+def TEMP_SENSOR__TSL2561_GAIN_validator(form, field):
+    try:
+        data_i = int(field.data)
+    except ValueError as e:
+        raise ValidationError('ValueError: {0:s}'.format(str(e)))
+
+    if data_i < 0:
+        raise ValidationError('Invalid gain selection')
+
+    if data_i > 1:
+        raise ValidationError('Invalid gain selection')
+
+
+def TEMP_SENSOR__TSL2561_INT_validator(form, field):
+    try:
+        data_i = int(field.data)
+    except ValueError as e:
+        raise ValidationError('ValueError: {0:s}'.format(str(e)))
+
+    if data_i < 0:
+        raise ValidationError('Invalid integration selection')
+
+    if data_i > 2:
+        raise ValidationError('Invalid integration selection')
+
+
+def TEMP_SENSOR__TSL2591_GAIN_validator(form, field):
+    if field.data not in list(zip(*form.TEMP_SENSOR__TSL2591_GAIN_choices))[0]:
+        raise ValidationError('Invalid gain selection')
+
+
+def TEMP_SENSOR__TSL2591_INT_validator(form, field):
+    if field.data not in list(zip(*form.TEMP_SENSOR__TSL2591_INT_choices))[0]:
+        raise ValidationError('Invalid integration selection')
+
+
+def HEALTHCHECK__DISK_USAGE_validator(form, field):
+    if not isinstance(field.data, (int, float)):
+        raise ValidationError('Please enter a valid number')
+
+
+    if field.data < 0:
+        raise ValidationError('Percentage must be 0 or greater')
+
+    if field.data > 101:
+        raise ValidationError('Percentage must be 101 or less')
+
+
+def HEALTHCHECK__SWAP_USAGE_validator(form, field):
+    if not isinstance(field.data, (int, float)):
+        raise ValidationError('Please enter a valid number')
+
+
+    if field.data < 0:
+        raise ValidationError('Percentage must be 0 or greater')
+
+    if field.data > 101:
+        raise ValidationError('Percentage must be 101 or less')
 
 
 def INDI_CONFIG_DEFAULTS_validator(form, field):
@@ -2113,7 +2393,8 @@ class IndiAllskyConfigForm(FlaskForm):
         ('libcamera_ov5647', 'libcamera OV5647'),
         ('libcamera_imx219', 'libcamera IMX219'),
         ('libcamera_imx519', 'libcamera IMX519'),
-        ('libcamera_64mp_hawkeye', 'libcamera 64mp Hawkeye'),
+        ('libcamera_64mp_hawkeye', 'libcamera 64mp HawkEye'),
+        ('libcamera_64mp_owlsight', 'libcamera 64mp OwlSight'),
         ('libcamera_imx708', 'libcamera IMX708'),
         ('libcamera_imx296_gs', 'libcamera IMX296 GS'),
         ('libcamera_imx290', 'libcamera IMX290'),
@@ -2134,6 +2415,13 @@ class IndiAllskyConfigForm(FlaskForm):
         ('c', 'Celcius'),
         ('f', 'Fahrenheit'),
         ('k', 'Kelvin'),
+    )
+
+    PRESSURE_DISPLAY_choices = (
+        ('hPa', 'hectoPascals (hPa)'),
+        ('psi', 'PSI'),
+        ('inHg', 'Inches of Mercury (inHg)'),
+        ('mmHg', 'Millimeters of Mercury (mmHg)'),
     )
 
     IMAGE_FILE_TYPE_choices = (
@@ -2320,10 +2608,182 @@ class IndiAllskyConfigForm(FlaskForm):
         ('custom', 'Custom'),
     )
 
+    LIBCAMERA__CAMERA_ID_choices = (
+        ('0', '0'),
+        ('1', '1'),
+        ('2', '2'),
+        ('3', '3'),
+    )
+
+    PYCURL_CAMERA__IMAGE_FILE_TYPE_choices = (
+        ('jpg', 'JPEG'),
+        ('png', 'PNG'),
+    )
+
     YOUTUBE__PRIVACY_STATUS_choices = (
         ('private', 'Private'),
         ('public', 'Public'),
         ('unlisted', 'Unlisted'),
+    )
+
+    FOCUSER__CLASSNAME_choices = (
+        ('', 'None'),
+        ('blinka_focuser_28byj_64', '28BYJ-48 Stepper (1/64) ULN2003 - GPIO'),
+        ('blinka_focuser_28byj_16', '28BYJ-48 Stepper (1/16) ULN2003 - GPIO'),
+        ('serial_focuser_28byj_64', '28BYJ-48 Stepper (1/64) ULN2003 - Serial Port'),
+    )
+
+    DEW_HEATER__CLASSNAME_choices = (
+        ('', 'None'),
+        ('blinka_dew_heater_standard', 'Dew Heater - Standard'),
+        ('blinka_dew_heater_pwm', 'Dew Heater - PWM'),
+        ('serial_dew_heater_pwm', 'Dew Heater - PWM (Serial Port)'),
+    )
+
+    FAN__CLASSNAME_choices = (
+        ('', 'None'),
+        ('blinka_fan_standard', 'Fan - Standard'),
+        ('blinka_fan_pwm', 'Fan - PWM'),
+        ('serial_fan_pwm', 'Fan - PWM (Serial Port)'),
+    )
+
+    GENERIC_GPIO__CLASSNAME_choices = (
+        ('', 'None'),
+        ('blinka_gpio_standard', 'GPIO - Standard'),
+    )
+
+    TEMP_SENSOR__CLASSNAME_choices = (
+        ('', 'None'),
+        ('temp_api_openweathermap', 'OpenWeather API (9)'),
+        ('kernel_temp_sensor_ds18x20_w1', 'DS18x20 - Temp (1)'),
+        ('blinka_temp_sensor_dht22', 'DHT22/AM2302 - Temp/RH (2)'),
+        ('blinka_temp_sensor_dht21', 'DHT21/AM2301 - Temp/RH (2)'),
+        ('blinka_temp_sensor_dht11', 'DHT11 - Temp/RH (2)'),
+        ('blinka_temp_sensor_bmp180_i2c', 'BMP180 i2c - Temp/Pres (2)'),
+        ('blinka_temp_sensor_bme280_i2c', 'BME280 i2c - Temp/RH/Pres (3)'),
+        ('blinka_temp_sensor_bme280_spi', 'BME280 SPI - Temp/RH/Pres (3)'),
+        ('blinka_temp_sensor_bme680_i2c', 'BME680 i2c - Temp/RH/Pres/Gas (4)'),
+        ('blinka_temp_sensor_bme680_spi', 'BME680 SPI - Temp/RH/Pres/Gas (4)'),
+        ('blinka_temp_sensor_si7021_i2c', 'Si7021 i2c - Temp/RH (2)'),
+        ('blinka_temp_sensor_sht4x_i2c', 'SHT40/41/45 i2c - Temp/RH (2)'),
+        ('cpads_temp_sensor_tmp36_ads1015_i2c', 'TMP36 ADS1015 i2c - Temp (1)'),
+        ('cpads_temp_sensor_tmp36_ads1115_i2c', 'TMP36 ADS1115 i2c - Temp (1)'),
+        ('cpads_temp_sensor_lm35_ads1015_i2c', 'LM35 ADS1015 i2c - Temp (1)'),
+        ('cpads_temp_sensor_lm35_ads1115_i2c', 'LM35 ADS1115 i2c - Temp (1)'),
+        ('blinka_temp_sensor_mlx90614_i2c', 'MLX90614 i2c - Temp/SkyTemp (2)'),
+        ('blinka_light_sensor_tsl2561_i2c', 'TSL2561 i2c - Lux/Full/IR (3)'),
+        ('blinka_light_sensor_tsl2591_i2c', 'TSL2591 i2c - Lux/Vis/IR/Full (4)'),
+        ('blinka_light_sensor_bh1750_i2c', 'BH1750 (GY-30) i2c - Lux (1)'),
+        ('mqtt_broker_sensor', 'MQTT Broker Sensor - (5)'),
+        ('sensor_data_generator', 'Test Data Generator - (4)'),
+    )
+
+    SENSOR_USER_VAR_SLOT_choices = (
+        ('10', 'User Slot 10'),
+        ('11', 'User Slot 11'),
+        ('12', 'User Slot 12'),
+        ('13', 'User Slot 13'),
+        ('14', 'User Slot 14'),
+        ('15', 'User Slot 15'),
+        ('16', 'User Slot 16'),
+        ('17', 'User Slot 17'),
+        ('18', 'User Slot 18'),
+        ('19', 'User Slot 19'),
+        ('20', 'User Slot 20'),
+        ('21', 'User Slot 21'),
+        ('22', 'User Slot 22'),
+        ('23', 'User Slot 23'),
+        ('24', 'User Slot 24'),
+        ('25', 'User Slot 25'),
+        ('26', 'User Slot 26'),
+        ('27', 'User Slot 27'),
+        ('28', 'User Slot 28'),
+        ('29', 'User Slot 29'),
+    )
+
+    SENSOR_SLOT_choices = [  # mutable
+        ('0', '(0) User Slot - Camera Temp'),
+        ('1', '(1) User Slot - Dew Heater Level'),
+        ('2', '(2) User Slot - Dew Point'),
+        ('3', '(3) User Slot - Frost Point'),
+        ('4', '(4) User Slot - Fan Level'),
+        ('5', '(5) User Slot - Heat Index'),
+        ('6', '(6) User Slot - Wind Dir (Degrees)'),
+        ('7', '(7) User Slot - SQM)'),
+        ('8', '(8) User Slot - Reserved'),
+        ('9', '(9) User Slot - Reserved'),
+        ('10', 'User Slot 10'),
+        ('11', 'User Slot 11'),
+        ('12', 'User Slot 12'),
+        ('13', 'User Slot 13'),
+        ('14', 'User Slot 14'),
+        ('15', 'User Slot 15'),
+        ('16', 'User Slot 16'),
+        ('17', 'User Slot 17'),
+        ('18', 'User Slot 18'),
+        ('19', 'User Slot 19'),
+        ('20', 'User Slot 20'),
+        ('21', 'User Slot 21'),
+        ('22', 'User Slot 22'),
+        ('23', 'User Slot 23'),
+        ('24', 'User Slot 24'),
+        ('25', 'User Slot 25'),
+        ('26', 'User Slot 26'),
+        ('27', 'User Slot 27'),
+        ('28', 'User Slot 28'),
+        ('29', 'User Slot 29'),
+        ('100', '(0) System Temp - Camera Temp'),
+        ('110', 'System Temp 10'),
+        ('111', 'System Temp 11'),
+        ('112', 'System Temp 12'),
+        ('113', 'System Temp 13'),
+        ('114', 'System Temp 14'),
+        ('115', 'System Temp 15'),
+        ('116', 'System Temp 16'),
+        ('117', 'System Temp 17'),
+        ('118', 'System Temp 18'),
+        ('119', 'System Temp 19'),
+        ('120', 'System Temp 20'),
+        ('121', 'System Temp 21'),
+        ('122', 'System Temp 22'),
+        ('123', 'System Temp 23'),
+        ('124', 'System Temp 24'),
+        ('125', 'System Temp 25'),
+        ('126', 'System Temp 26'),
+        ('127', 'System Temp 27'),
+        ('128', 'System Temp 28'),
+        ('129', 'System Temp 29'),
+    ]
+
+
+    TEMP_SENSOR__TSL2561_GAIN_choices = (
+        ('0', 'Low (1x)'),
+        ('1', 'High (16x)'),
+    )
+
+
+    TEMP_SENSOR__TSL2561_INT_choices = (
+        ('0', '13.7ms'),
+        ('1', '101ms (default)'),
+        ('2', '402ms'),
+    )
+
+
+    TEMP_SENSOR__TSL2591_GAIN_choices = (
+        ('GAIN_LOW', 'Low (1x)'),
+        ('GAIN_MED', 'Medium (25x) (default)'),
+        ('GAIN_HIGH', 'High (428x)'),
+        ('GAIN_MAX', 'Maximum (9876x)'),
+    )
+
+
+    TEMP_SENSOR__TSL2591_INT_choices = (
+        ('INTEGRATIONTIME_100MS', '100ms (default)'),
+        ('INTEGRATIONTIME_200MS', '200ms'),
+        ('INTEGRATIONTIME_300MS', '300ms'),
+        ('INTEGRATIONTIME_400MS', '400ms'),
+        ('INTEGRATIONTIME_500MS', '500ms'),
+        ('INTEGRATIONTIME_600MS', '600ms'),
     )
 
 
@@ -2364,6 +2824,7 @@ class IndiAllskyConfigForm(FlaskForm):
     CCD_COOLING                      = BooleanField('CCD Cooling')
     CCD_TEMP                         = FloatField('Target CCD Temp', validators=[CCD_TEMP_validator])
     TEMP_DISPLAY                     = SelectField('Temperature Display', choices=TEMP_DISPLAY_choices, validators=[DataRequired(), TEMP_DISPLAY_validator])
+    PRESSURE_DISPLAY                 = SelectField('Pressure Display', choices=PRESSURE_DISPLAY_choices, validators=[DataRequired(), PRESSURE_DISPLAY_validator])
     CCD_TEMP_SCRIPT                  = StringField('External Temperature Script', validators=[CCD_TEMP_SCRIPT_validator])
     GPS_ENABLE                       = BooleanField('GPS Enable')
     TARGET_ADU                       = IntegerField('Target ADU (night)', validators=[DataRequired(), TARGET_ADU_validator])
@@ -2386,11 +2847,14 @@ class IndiAllskyConfigForm(FlaskForm):
     SQM_ROI_X2                       = IntegerField('SQM ROI x2', validators=[SQM_ROI_validator])
     SQM_ROI_Y2                       = IntegerField('SQM ROI y2', validators=[SQM_ROI_validator])
     SQM_FOV_DIV                      = SelectField('SQM FoV', choices=SQM_FOV_DIV_choices, validators=[SQM_FOV_DIV_validator])
+    HEALTHCHECK__DISK_USAGE          = FloatField('Disk Usage Percentage', validators=[DataRequired(), HEALTHCHECK__DISK_USAGE_validator])
+    HEALTHCHECK__SWAP_USAGE          = FloatField('Swap Usage Percentage', validators=[DataRequired(), HEALTHCHECK__SWAP_USAGE_validator])
     LOCATION_NAME                    = StringField('Location', validators=[LOCATION_NAME_validator])
     LOCATION_LATITUDE                = FloatField('Latitude', validators=[LOCATION_LATITUDE_validator])
     LOCATION_LONGITUDE               = FloatField('Longitude', validators=[LOCATION_LONGITUDE_validator])
     LOCATION_ELEVATION               = IntegerField('Elevation', validators=[LOCATION_ELEVATION_validator])
     TIMELAPSE_ENABLE                 = BooleanField('Enable Timelapse Creation')
+    TIMELAPSE_SKIP_FRAMES            = IntegerField('Timelapse Skip Frames', validators=[TIMELAPSE_SKIP_FRAMES_validator])
     DAYTIME_CAPTURE                  = BooleanField('Daytime Capture')
     DAYTIME_TIMELAPSE                = BooleanField('Daytime Timelapse')
     DAYTIME_CONTRAST_ENHANCE         = BooleanField('Daytime Contrast Enhance')
@@ -2428,6 +2892,8 @@ class IndiAllskyConfigForm(FlaskForm):
     STARTRAILS_TIMELAPSE             = BooleanField('Star Trails Timelapse')
     STARTRAILS_TIMELAPSE_MINFRAMES   = IntegerField('Star Trails Timelapse Minimum Frames', validators=[DataRequired(), STARTRAILS_TIMELAPSE_MINFRAMES_validator])
     STARTRAILS_USE_DB_DATA           = BooleanField('Star Trails Use Existing Data')
+    IMAGE_CALIBRATE_DARK             = BooleanField('Apply Dark Calibration Frames')
+    IMAGE_SAVE_FITS_PRE_DARK         = BooleanField('Save FITS Pre-Calibration')
     IMAGE_EXIF_PRIVACY               = BooleanField('Enable EXIF Privacy')
     IMAGE_FILE_TYPE                  = SelectField('Image file type', choices=IMAGE_FILE_TYPE_choices, validators=[DataRequired(), IMAGE_FILE_TYPE_validator])
     IMAGE_FILE_COMPRESSION__JPG      = IntegerField('JPEG Quality', validators=[DataRequired(), IMAGE_FILE_COMPRESSION__JPG_validator])
@@ -2462,6 +2928,11 @@ class IndiAllskyConfigForm(FlaskForm):
     FISH2PANO__ROTATE_ANGLE          = IntegerField('Rotation Angle', validators=[FISH2PANO__ROTATE_ANGLE_validator])
     FISH2PANO__SCALE                 = FloatField('Scale', validators=[FISH2PANO__SCALE_validator])
     FISH2PANO__MODULUS               = IntegerField('Modulus', validators=[DataRequired(), FISH2PANO__MODULUS_validator])
+    FISH2PANO__FLIP_H                = BooleanField('Flip Horizontally')
+    FISH2PANO__ENABLE_CARDINAL_DIRS  = BooleanField('Fisheye Cardinal Directions')
+    FISH2PANO__DIRS_OFFSET_BOTTOM    = IntegerField('Label Bottom Offset', validators=[CARDINAL_DIRS__SIDE_OFFSET_validator])
+    FISH2PANO__OPENCV_FONT_SCALE     = FloatField('Font Scale (opencv)', validators=[DataRequired(), TEXT_PROPERTIES__FONT_SCALE_validator])
+    FISH2PANO__PIL_FONT_SIZE         = IntegerField('Font Size (pillow)', validators=[DataRequired(), TEXT_PROPERTIES__PIL_FONT_SIZE_validator])
     IMAGE_SAVE_FITS                  = BooleanField('Save FITS data')
     NIGHT_GRAYSCALE                  = BooleanField('Save in Grayscale at Night')
     DAYTIME_GRAYSCALE                = BooleanField('Save in Grayscale during Day')
@@ -2483,6 +2954,7 @@ class IndiAllskyConfigForm(FlaskForm):
     FFMPEG_BITRATE                   = StringField('FFMPEG Bitrate', validators=[DataRequired(), FFMPEG_BITRATE_validator])
     FFMPEG_VFSCALE                   = SelectField('FFMPEG Scaling', choices=FFMPEG_VFSCALE_choices, validators=[FFMPEG_VFSCALE_validator])
     FFMPEG_CODEC                     = SelectField('FFMPEG Codec', choices=FFMPEG_CODEC_choices, validators=[FFMPEG_CODEC_validator])
+    FFMPEG_EXTRA_OPTIONS             = StringField('FFMPEG Extra Options', validators=[FFMPEG_EXTRA_OPTIONS_validator])
     IMAGE_LABEL_SYSTEM               = SelectField('Label Images', choices=IMAGE_LABEL_SYSTEM_choices, validators=[IMAGE_LABEL_SYSTEM_validator])
     TEXT_PROPERTIES__FONT_FACE       = SelectField('OpenCV Font', choices=TEXT_PROPERTIES__FONT_FACE_choices, validators=[DataRequired(), TEXT_PROPERTIES__FONT_FACE_validator])
     #TEXT_PROPERTIES__FONT_AA
@@ -2518,6 +2990,8 @@ class IndiAllskyConfigForm(FlaskForm):
     ORB_PROPERTIES__RADIUS           = IntegerField('Orb Radius', validators=[DataRequired(), ORB_PROPERTIES__RADIUS_validator])
     ORB_PROPERTIES__SUN_COLOR        = StringField('Sun Orb Color (r,g,b)', validators=[DataRequired(), RGB_COLOR_validator])
     ORB_PROPERTIES__MOON_COLOR       = StringField('Moon Orb Color (r,g,b)', validators=[DataRequired(), RGB_COLOR_validator])
+    ORB_PROPERTIES__AZ_OFFSET        = FloatField('Azimuth Offset', validators=[ORB_PROPERTIES__AZ_OFFSET_validator])
+    ORB_PROPERTIES__RETROGRADE       = BooleanField('Reverse Orb Motion')
     UPLOAD_WORKERS                   = IntegerField('Upload Workers', validators=[DataRequired(), UPLOAD_WORKERS_validator])
     FILETRANSFER__CLASSNAME          = SelectField('Protocol', choices=FILETRANSFER__CLASSNAME_choices, validators=[DataRequired(), FILETRANSFER__CLASSNAME_validator])
     FILETRANSFER__HOST               = StringField('Host', validators=[FILETRANSFER__HOST_validator])
@@ -2536,6 +3010,8 @@ class IndiAllskyConfigForm(FlaskForm):
     FILETRANSFER__REMOTE_PANORAMA_FOLDER   = StringField('Remote Panorama Folder', validators=[DataRequired(), REMOTE_FOLDER_validator])
     FILETRANSFER__REMOTE_METADATA_NAME     = StringField('Remote Metadata Name', validators=[DataRequired(), FILETRANSFER__REMOTE_METADATA_NAME_validator])
     FILETRANSFER__REMOTE_METADATA_FOLDER   = StringField('Remote Metadata Folder', validators=[DataRequired(), REMOTE_FOLDER_validator])
+    FILETRANSFER__REMOTE_RAW_FOLDER        = StringField('Remote RAW Folder', validators=[DataRequired(), REMOTE_FOLDER_validator])
+    FILETRANSFER__REMOTE_FITS_FOLDER       = StringField('Remote FITS Folder', validators=[DataRequired(), REMOTE_FOLDER_validator])
     FILETRANSFER__REMOTE_VIDEO_FOLDER      = StringField('Remote Video Folder', validators=[DataRequired(), REMOTE_FOLDER_validator])
     FILETRANSFER__REMOTE_KEOGRAM_FOLDER    = StringField('Remote Keogram Folder', validators=[DataRequired(), REMOTE_FOLDER_validator])
     FILETRANSFER__REMOTE_STARTRAIL_FOLDER  = StringField('Remote Star Trails Folder', validators=[DataRequired(), REMOTE_FOLDER_validator])
@@ -2545,6 +3021,8 @@ class IndiAllskyConfigForm(FlaskForm):
     FILETRANSFER__UPLOAD_IMAGE       = IntegerField('Transfer images', validators=[FILETRANSFER__UPLOAD_IMAGE_validator])
     FILETRANSFER__UPLOAD_PANORAMA    = IntegerField('Transfer panoramas', validators=[FILETRANSFER__UPLOAD_IMAGE_validator])
     FILETRANSFER__UPLOAD_METADATA    = BooleanField('Transfer metadata')
+    FILETRANSFER__UPLOAD_RAW         = BooleanField('Transfer RAW')
+    FILETRANSFER__UPLOAD_FITS        = BooleanField('Transfer FITS')
     FILETRANSFER__UPLOAD_VIDEO       = BooleanField('Transfer videos')
     FILETRANSFER__UPLOAD_KEOGRAM     = BooleanField('Transfer keograms')
     FILETRANSFER__UPLOAD_STARTRAIL   = BooleanField('Transfer star trails')
@@ -2580,6 +3058,7 @@ class IndiAllskyConfigForm(FlaskForm):
     MQTTPUBLISH__QOS                 = IntegerField('MQTT QoS', validators=[MQTTPUBLISH__QOS_validator])
     MQTTPUBLISH__TLS                 = BooleanField('Use TLS')
     MQTTPUBLISH__CERT_BYPASS         = BooleanField('Disable Certificate Validation')
+    MQTTPUBLISH__PUBLISH_IMAGE       = BooleanField('Enable Image Publishing')
     SYNCAPI__ENABLE                  = BooleanField('Enable Sync API')
     SYNCAPI__BASEURL                 = StringField('URL', validators=[SYNCAPI__BASEURL_validator])
     SYNCAPI__USERNAME                = StringField('Username', validators=[SYNCAPI__USERNAME_validator], render_kw={'autocomplete' : 'new-password'})
@@ -2619,11 +3098,84 @@ class IndiAllskyConfigForm(FlaskForm):
     LIBCAMERA__AWB_DAY               = SelectField('Day AWB', choices=LIBCAMERA__AWB_choices, validators=[DataRequired(), LIBCAMERA__AWB_validator])
     LIBCAMERA__AWB_ENABLE            = BooleanField('Night Enable AWB')
     LIBCAMERA__AWB_ENABLE_DAY        = BooleanField('Day Enable AWB')
+    LIBCAMERA__CAMERA_ID             = SelectField('Camera ID', choices=LIBCAMERA__CAMERA_ID_choices, validators=[LIBCAMERA__CAMERA_ID_validator])
     LIBCAMERA__EXTRA_OPTIONS         = StringField('Night libcamera extra options', validators=[LIBCAMERA__EXTRA_OPTIONS_validator])
     LIBCAMERA__EXTRA_OPTIONS_DAY     = StringField('Day libcamera extra options', validators=[LIBCAMERA__EXTRA_OPTIONS_validator])
     PYCURL_CAMERA__URL               = StringField('pyCurl Camera URL', validators=[PYCURL_CAMERA__URL_validator])
+    PYCURL_CAMERA__IMAGE_FILE_TYPE   = SelectField('File Type', choices=PYCURL_CAMERA__IMAGE_FILE_TYPE_choices, validators=[DataRequired(), PYCURL_CAMERA__IMAGE_FILE_TYPE_validator])
     PYCURL_CAMERA__USERNAME          = StringField('Username', validators=[PYCURL_CAMERA__USERNAME_validator], render_kw={'autocomplete' : 'new-password'})
     PYCURL_CAMERA__PASSWORD          = PasswordField('Password', widget=PasswordInput(hide_value=False), validators=[PYCURL_CAMERA__PASSWORD_validator], render_kw={'autocomplete' : 'new-password'})
+    FOCUSER__CLASSNAME               = SelectField('Focuser', choices=FOCUSER__CLASSNAME_choices, validators=[FOCUSER__CLASSNAME_validator])
+    FOCUSER__GPIO_PIN_1              = StringField('GPIO Pin 1', validators=[DEVICE_PIN_NAME_validator])
+    FOCUSER__GPIO_PIN_2              = StringField('GPIO Pin 2', validators=[DEVICE_PIN_NAME_validator])
+    FOCUSER__GPIO_PIN_3              = StringField('GPIO Pin 3', validators=[DEVICE_PIN_NAME_validator])
+    FOCUSER__GPIO_PIN_4              = StringField('GPIO Pin 4', validators=[DEVICE_PIN_NAME_validator])
+    DEW_HEATER__CLASSNAME            = SelectField('Dew Heater', choices=DEW_HEATER__CLASSNAME_choices, validators=[DEW_HEATER__CLASSNAME_validator])
+    DEW_HEATER__ENABLE_DAY           = BooleanField('Enable Daytime')
+    DEW_HEATER__PIN_1                = StringField('Pin', validators=[DEVICE_PIN_NAME_validator])
+    DEW_HEATER__INVERT_OUTPUT        = BooleanField('Invert Output')
+    DEW_HEATER__LEVEL_DEF            = IntegerField('Default Level', validators=[DEW_HEATER__LEVEL_validator])
+    DEW_HEATER__THOLD_ENABLE         = BooleanField('Enable Dew Heater Thresholds')
+    DEW_HEATER__MANUAL_TARGET        = FloatField('Manual Target', validators=[DEW_HEATER__MANUAL_TARGET_validator])
+    DEW_HEATER__TEMP_USER_VAR_SLOT   = SelectField('Temperature Sensor Slot', choices=[], validators=[SENSOR_SLOT_validator])
+    DEW_HEATER__LEVEL_LOW            = IntegerField('Low Setting', validators=[DEW_HEATER__LEVEL_validator])
+    DEW_HEATER__LEVEL_MED            = IntegerField('Medium Setting', validators=[DEW_HEATER__LEVEL_validator])
+    DEW_HEATER__LEVEL_HIGH           = IntegerField('High Setting', validators=[DEW_HEATER__LEVEL_validator])
+    DEW_HEATER__THOLD_DIFF_LOW       = IntegerField('Low Threshold Difference', validators=[DEW_HEATER__THOLD_DIFF_validator])
+    DEW_HEATER__THOLD_DIFF_MED       = IntegerField('Medium Threshold Difference', validators=[DEW_HEATER__THOLD_DIFF_validator])
+    DEW_HEATER__THOLD_DIFF_HIGH      = IntegerField('High Threshold Difference', validators=[DEW_HEATER__THOLD_DIFF_validator])
+    FAN__CLASSNAME                   = SelectField('Fan', choices=FAN__CLASSNAME_choices, validators=[FAN__CLASSNAME_validator])
+    FAN__ENABLE_NIGHT                = BooleanField('Enable Night')
+    FAN__PIN_1                       = StringField('Pin', validators=[DEVICE_PIN_NAME_validator])
+    FAN__INVERT_OUTPUT               = BooleanField('Invert Output')
+    FAN__LEVEL_DEF                   = IntegerField('Default Level', validators=[FAN__LEVEL_validator])
+    FAN__THOLD_ENABLE                = BooleanField('Enable Fan Thresholds')
+    FAN__TARGET                      = FloatField('Target Temp', validators=[FAN__TARGET_validator])
+    FAN__TEMP_USER_VAR_SLOT          = SelectField('Temperature Sensor Slot', choices=[], validators=[SENSOR_SLOT_validator])
+    FAN__LEVEL_LOW                   = IntegerField('Low Setting', validators=[FAN__LEVEL_validator])
+    FAN__LEVEL_MED                   = IntegerField('Medium Setting', validators=[FAN__LEVEL_validator])
+    FAN__LEVEL_HIGH                  = IntegerField('High Setting', validators=[FAN__LEVEL_validator])
+    FAN__THOLD_DIFF_LOW              = IntegerField('Low Threshold Difference', validators=[FAN__THOLD_DIFF_validator])
+    FAN__THOLD_DIFF_MED              = IntegerField('Medium Threshold Difference', validators=[FAN__THOLD_DIFF_validator])
+    FAN__THOLD_DIFF_HIGH             = IntegerField('High Threshold Difference', validators=[FAN__THOLD_DIFF_validator])
+    GENERIC_GPIO__A_CLASSNAME        = SelectField('GPIO', choices=GENERIC_GPIO__CLASSNAME_choices, validators=[GENERIC_GPIO__CLASSNAME_validator])
+    GENERIC_GPIO__A_PIN_1            = StringField('Pin/Port', validators=[DEVICE_PIN_NAME_validator])
+    GENERIC_GPIO__A_INVERT_OUTPUT    = BooleanField('Invert Output')
+    TEMP_SENSOR__A_CLASSNAME         = SelectField('Sensor A', choices=TEMP_SENSOR__CLASSNAME_choices, validators=[TEMP_SENSOR__CLASSNAME_validator])
+    TEMP_SENSOR__A_LABEL             = StringField('Label', validators=[DataRequired(), TEMP_SENSOR__LABEL_validator])
+    TEMP_SENSOR__A_PIN_1             = StringField('Pin/Port', validators=[DEVICE_PIN_NAME_validator])
+    TEMP_SENSOR__A_USER_VAR_SLOT     = SelectField('Sensor A Slot', choices=SENSOR_USER_VAR_SLOT_choices, validators=[SENSOR_USER_VAR_SLOT_validator])
+    TEMP_SENSOR__A_I2C_ADDRESS       = StringField('I2C Address', validators=[DataRequired(), TEMP_SENSOR__I2C_ADDRESS_validator])
+    TEMP_SENSOR__B_CLASSNAME         = SelectField('Sensor B', choices=TEMP_SENSOR__CLASSNAME_choices, validators=[TEMP_SENSOR__CLASSNAME_validator])
+    TEMP_SENSOR__B_LABEL             = StringField('Label', validators=[DataRequired(), TEMP_SENSOR__LABEL_validator])
+    TEMP_SENSOR__B_PIN_1             = StringField('Pin/Port', validators=[DEVICE_PIN_NAME_validator])
+    TEMP_SENSOR__B_USER_VAR_SLOT     = SelectField('Sensor B Slot', choices=SENSOR_USER_VAR_SLOT_choices, validators=[SENSOR_USER_VAR_SLOT_validator])
+    TEMP_SENSOR__B_I2C_ADDRESS       = StringField('I2C Address', validators=[DataRequired(), TEMP_SENSOR__I2C_ADDRESS_validator])
+    TEMP_SENSOR__C_CLASSNAME         = SelectField('Sensor C', choices=TEMP_SENSOR__CLASSNAME_choices, validators=[TEMP_SENSOR__CLASSNAME_validator])
+    TEMP_SENSOR__C_LABEL             = StringField('Label', validators=[DataRequired(), TEMP_SENSOR__LABEL_validator])
+    TEMP_SENSOR__C_PIN_1             = StringField('Pin/Port', validators=[DEVICE_PIN_NAME_validator])
+    TEMP_SENSOR__C_USER_VAR_SLOT     = SelectField('Sensor C Slot', choices=SENSOR_USER_VAR_SLOT_choices, validators=[SENSOR_USER_VAR_SLOT_validator])
+    TEMP_SENSOR__C_I2C_ADDRESS       = StringField('I2C Address', validators=[DataRequired(), TEMP_SENSOR__I2C_ADDRESS_validator])
+    TEMP_SENSOR__OPENWEATHERMAP_APIKEY = PasswordField('OpenWeatherMap Api Key', widget=PasswordInput(hide_value=False), validators=[TEMP_SENSOR__OPENWEATHERMAP_APIKEY_validator], render_kw={'autocomplete' : 'new-password'})
+    TEMP_SENSOR__MQTT_TRANSPORT      = SelectField('MQTT Transport', choices=MQTTPUBLISH__TRANSPORT_choices, validators=[DataRequired(), MQTTPUBLISH__TRANSPORT_validator])
+    TEMP_SENSOR__MQTT_HOST           = StringField('MQTT Host', validators=[MQTTPUBLISH__HOST_validator])
+    TEMP_SENSOR__MQTT_PORT           = IntegerField('Port', validators=[DataRequired(), MQTTPUBLISH__PORT_validator])
+    TEMP_SENSOR__MQTT_USERNAME       = StringField('Username', validators=[MQTTPUBLISH__USERNAME_validator], render_kw={'autocomplete' : 'new-password'})
+    TEMP_SENSOR__MQTT_PASSWORD       = PasswordField('Password', widget=PasswordInput(hide_value=False), validators=[MQTTPUBLISH__PASSWORD_validator], render_kw={'autocomplete' : 'new-password'})
+    TEMP_SENSOR__MQTT_TLS            = BooleanField('Use TLS')
+    TEMP_SENSOR__MQTT_CERT_BYPASS    = BooleanField('Disable Certificate Validation')
+    TEMP_SENSOR__TSL2561_GAIN_NIGHT  = SelectField('TSL2561 Gain (Night)', choices=TEMP_SENSOR__TSL2561_GAIN_choices, validators=[TEMP_SENSOR__TSL2561_GAIN_validator])
+    TEMP_SENSOR__TSL2561_GAIN_DAY    = SelectField('TSL2561 Gain (Day)', choices=TEMP_SENSOR__TSL2561_GAIN_choices, validators=[TEMP_SENSOR__TSL2561_GAIN_validator])
+    TEMP_SENSOR__TSL2561_INT_NIGHT   = SelectField('TSL2561 Integration (Night)', choices=TEMP_SENSOR__TSL2561_INT_choices, validators=[TEMP_SENSOR__TSL2561_INT_validator])
+    TEMP_SENSOR__TSL2561_INT_DAY     = SelectField('TSL2561 Integration (Day)', choices=TEMP_SENSOR__TSL2561_INT_choices, validators=[TEMP_SENSOR__TSL2561_INT_validator])
+    TEMP_SENSOR__TSL2591_GAIN_NIGHT  = SelectField('TSL2591 Gain (Night)', choices=TEMP_SENSOR__TSL2591_GAIN_choices, validators=[TEMP_SENSOR__TSL2591_GAIN_validator])
+    TEMP_SENSOR__TSL2591_GAIN_DAY    = SelectField('TSL2591 Gain (Day)', choices=TEMP_SENSOR__TSL2591_GAIN_choices, validators=[TEMP_SENSOR__TSL2591_GAIN_validator])
+    TEMP_SENSOR__TSL2591_INT_NIGHT   = SelectField('TSL2591 Integration (Night)', choices=TEMP_SENSOR__TSL2591_INT_choices, validators=[TEMP_SENSOR__TSL2591_INT_validator])
+    TEMP_SENSOR__TSL2591_INT_DAY     = SelectField('TSL2591 Integration (Day)', choices=TEMP_SENSOR__TSL2591_INT_choices, validators=[TEMP_SENSOR__TSL2591_INT_validator])
+    CHARTS__CUSTOM_SLOT_1            = SelectField('Extra Chart Slot 1', choices=[], validators=[SENSOR_SLOT_validator])
+    CHARTS__CUSTOM_SLOT_2            = SelectField('Extra Chart Slot 2', choices=[], validators=[SENSOR_SLOT_validator])
+    CHARTS__CUSTOM_SLOT_3            = SelectField('Extra Chart Slot 3', choices=[], validators=[SENSOR_SLOT_validator])
+    CHARTS__CUSTOM_SLOT_4            = SelectField('Extra Chart Slot 4', choices=[], validators=[SENSOR_SLOT_validator])
     INDI_CONFIG_DEFAULTS             = TextAreaField('INDI Camera Config (Default)', validators=[DataRequired(), INDI_CONFIG_DEFAULTS_validator])
     INDI_CONFIG_DAY                  = TextAreaField('INDI Camera Config (Day)', validators=[DataRequired(), INDI_CONFIG_DAY_validator])
 
@@ -2633,8 +3185,87 @@ class IndiAllskyConfigForm(FlaskForm):
     ADMIN_NETWORKS_FLASK             = TextAreaField('Admin Networks', render_kw={'readonly' : True, 'disabled' : 'disabled'})
 
 
-    #def __init__(self, *args, **kwargs):
-    #    super(IndiAllskyConfigForm, self).__init__(*args, **kwargs)
+    def __init__(self, *args, **kwargs):
+        super(IndiAllskyConfigForm, self).__init__(*args, **kwargs)
+
+        from ..devices import sensors as indi_allsky_sensors
+
+        data = kwargs['data']
+
+
+        temp_sensor__a_classname = str(data['TEMP_SENSOR__A_CLASSNAME'])
+        temp_sensor__a_label = str(data['TEMP_SENSOR__A_LABEL'])
+        temp_sensor__a_user_var_slot = int(data['TEMP_SENSOR__A_USER_VAR_SLOT'])
+        temp_sensor__b_classname = str(data['TEMP_SENSOR__B_CLASSNAME'])
+        temp_sensor__b_label = str(data['TEMP_SENSOR__B_LABEL'])
+        temp_sensor__b_user_var_slot = int(data['TEMP_SENSOR__B_USER_VAR_SLOT'])
+        temp_sensor__c_classname = str(data['TEMP_SENSOR__C_CLASSNAME'])
+        temp_sensor__c_label = str(data['TEMP_SENSOR__C_LABEL'])
+        temp_sensor__c_user_var_slot = int(data['TEMP_SENSOR__C_USER_VAR_SLOT'])
+
+
+        if temp_sensor__a_classname:
+            try:
+                temp_sensor__a_class = getattr(indi_allsky_sensors, temp_sensor__a_classname)
+
+                for x in range(temp_sensor__a_class.METADATA['count']):
+                    self.SENSOR_SLOT_choices[temp_sensor__a_user_var_slot + x] = (
+                        str(temp_sensor__a_user_var_slot + x),
+                        '({0:d}) {1:s} - {2:s} - {3:s}'.format(
+                            temp_sensor__a_user_var_slot + x,
+                            temp_sensor__a_class.METADATA['name'],
+                            temp_sensor__a_label,
+                            temp_sensor__a_class.METADATA['labels'][x],
+                        )
+                    )
+            except AttributeError:
+                app.logger.error('Unknown sensor class: %s', temp_sensor__a_classname)
+
+
+        if temp_sensor__b_classname:
+            try:
+                temp_sensor__b_class = getattr(indi_allsky_sensors, temp_sensor__b_classname)
+
+                for x in range(temp_sensor__b_class.METADATA['count']):
+                    self.SENSOR_SLOT_choices[temp_sensor__b_user_var_slot + x] = (
+                        str(temp_sensor__b_user_var_slot + x),
+                        '({0:d}) {1:s} - {2:s} - {3:s}'.format(
+                            temp_sensor__b_user_var_slot + x,
+                            temp_sensor__b_class.METADATA['name'],
+                            temp_sensor__b_label,
+                            temp_sensor__b_class.METADATA['labels'][x],
+                        )
+                    )
+            except AttributeError:
+                app.logger.error('Unknown sensor class: %s', temp_sensor__a_classname)
+
+
+        if temp_sensor__c_classname:
+            try:
+                temp_sensor__c_class = getattr(indi_allsky_sensors, temp_sensor__c_classname)
+
+                for x in range(temp_sensor__c_class.METADATA['count']):
+                    self.SENSOR_SLOT_choices[temp_sensor__c_user_var_slot + x] = (
+                        str(temp_sensor__c_user_var_slot + x),
+                        '({0:d}) {1:s} - {2:s} - {3:s}'.format(
+                            temp_sensor__c_user_var_slot + x,
+                            temp_sensor__c_class.METADATA['name'],
+                            temp_sensor__c_label,
+                            temp_sensor__c_class.METADATA['labels'][x],
+                        )
+                    )
+            except AttributeError:
+                app.logger.error('Unknown sensor class: %s', temp_sensor__a_classname)
+
+
+        ### Update the choices
+        self.DEW_HEATER__TEMP_USER_VAR_SLOT.choices = self.SENSOR_SLOT_choices
+        self.FAN__TEMP_USER_VAR_SLOT.choices = self.SENSOR_SLOT_choices
+        self.CHARTS__CUSTOM_SLOT_1.choices = self.SENSOR_SLOT_choices
+        self.CHARTS__CUSTOM_SLOT_2.choices = self.SENSOR_SLOT_choices
+        self.CHARTS__CUSTOM_SLOT_3.choices = self.SENSOR_SLOT_choices
+        self.CHARTS__CUSTOM_SLOT_4.choices = self.SENSOR_SLOT_choices
+
 
 
     def validate(self):
@@ -2669,6 +3300,279 @@ class IndiAllskyConfigForm(FlaskForm):
         if mod_image_crop_y:
             self.IMAGE_CROP_ROI_Y2.errors.append('Y coordinates must be divisible by 2')
             result = False
+
+
+        # focuser
+        if self.FOCUSER__CLASSNAME.data:
+            if self.FOCUSER__CLASSNAME.data.startswith('blinka_'):
+                try:
+                    import board
+
+                    if self.FOCUSER__GPIO_PIN_1.data:
+                        try:
+                            getattr(board, self.FOCUSER__GPIO_PIN_1.data)
+                        except AttributeError:
+                            self.FOCUSER__GPIO_PIN_1.errors.append('PIN {0:s} not valid for your system'.format(self.FOCUSER__GPIO_PIN_1.data))
+                            result = False
+                    else:
+                        self.FOCUSER__GPIO_PIN_1.errors.append('PIN must be defined')
+                        result = False
+
+                    if self.FOCUSER__GPIO_PIN_2.data:
+                        try:
+                            getattr(board, self.FOCUSER__GPIO_PIN_2.data)
+                        except AttributeError:
+                            self.FOCUSER__GPIO_PIN_2.errors.append('PIN {0:s} not valid for your system'.format(self.FOCUSER__GPIO_PIN_2.data))
+                            result = False
+                    else:
+                        self.FOCUSER__GPIO_PIN_2.errors.append('PIN must be defined')
+                        result = False
+
+                    if self.FOCUSER__GPIO_PIN_3.data:
+                        try:
+                            getattr(board, self.FOCUSER__GPIO_PIN_3.data)
+                        except AttributeError:
+                            self.FOCUSER__GPIO_PIN_3.errors.append('PIN {0:s} not valid for your system'.format(self.FOCUSER__GPIO_PIN_3.data))
+                            result = False
+                    else:
+                        self.FOCUSER__GPIO_PIN_3.errors.append('PIN must be defined')
+                        result = False
+
+                    if self.FOCUSER__GPIO_PIN_4.data:
+                        try:
+                            getattr(board, self.FOCUSER__GPIO_PIN_4.data)
+                        except AttributeError:
+                            self.FOCUSER__GPIO_PIN_4.errors.append('PIN {0:s} not valid for your system'.format(self.FOCUSER__GPIO_PIN_4.data))
+                            result = False
+                    else:
+                        self.FOCUSER__GPIO_PIN_4.errors.append('PIN must be defined')
+                        result = False
+
+                except ImportError:
+                    self.FOCUSER__CLASSNAME.errors.append('GPIO python modules not installed')
+                    result = False
+
+                except PermissionError:
+                    self.FOCUSER__GPIO_PIN_1.errors.append('GPIO permissions need to be fixed')
+                    self.FOCUSER__GPIO_PIN_2.errors.append('GPIO permissions need to be fixed')
+                    self.FOCUSER__GPIO_PIN_3.errors.append('GPIO permissions need to be fixed')
+                    self.FOCUSER__GPIO_PIN_4.errors.append('GPIO permissions need to be fixed')
+                    result = False
+
+
+        # dew heater
+        if self.DEW_HEATER__CLASSNAME.data:
+            if self.DEW_HEATER__CLASSNAME.data.startswith('blinka_'):
+                try:
+                    import board
+
+                    if self.DEW_HEATER__PIN_1.data:
+                        try:
+                            getattr(board, self.DEW_HEATER__PIN_1.data)
+                        except AttributeError:
+                            self.DEW_HEATER__PIN_1.errors.append('PIN {0:s} not valid for your system'.format(self.DEW_HEATER__PIN_1.data))
+                            result = False
+                    else:
+                        self.DEW_HEATER__PIN_1.errors.append('PIN must be defined')
+                        result = False
+
+                except ImportError:
+                    self.DEW_HEATER__CLASSNAME.errors.append('GPIO python modules not installed')
+                    result = False
+
+                except PermissionError:
+                    self.DEW_HEATER__PIN_1.errors.append('GPIO permissions need to be fixed')
+                    result = False
+
+
+        if self.DEW_HEATER__THOLD_DIFF_HIGH.data >= self.DEW_HEATER__THOLD_DIFF_MED.data:
+            self.DEW_HEATER__THOLD_DIFF_HIGH.errors.append('HIGH value must be less than MEDIUM value')
+            self.DEW_HEATER__THOLD_DIFF_MED.errors.append('MEDIUM value must be greater than HIGH value')
+            result = False
+
+        if self.DEW_HEATER__THOLD_DIFF_MED.data >= self.DEW_HEATER__THOLD_DIFF_LOW.data:
+            self.DEW_HEATER__THOLD_DIFF_MED.errors.append('MEDIUM value must be less than LOW value')
+            self.DEW_HEATER__THOLD_DIFF_LOW.errors.append('LOW value must be greater than MEDIUM value')
+            result = False
+
+
+        # fan
+        if self.FAN__CLASSNAME.data:
+            if self.FAN__CLASSNAME.data.startswith('blinka_'):
+                try:
+                    import board
+
+                    if self.FAN__PIN_1.data:
+                        try:
+                            getattr(board, self.FAN__PIN_1.data)
+                        except AttributeError:
+                            self.FAN__PIN_1.errors.append('PIN {0:s} not valid for your system'.format(self.FAN__PIN_1.data))
+                            result = False
+                    else:
+                        self.FAN__PIN_1.errors.append('PIN must be defined')
+                        result = False
+
+                except ImportError:
+                    self.FAN__CLASSNAME.errors.append('GPIO python modules not installed')
+                    result = False
+
+                except PermissionError:
+                    self.FAN__PIN_1.errors.append('GPIO permissions need to be fixed')
+                    result = False
+
+
+        # generic gpio
+        if self.GENERIC_GPIO__A_CLASSNAME.data:
+            if self.GENERIC_GPIO__A_CLASSNAME.data.startswith('blinka_'):
+                try:
+                    import board
+
+                    if self.GENERIC_GPIO__A_PIN_1.data:
+                        try:
+                            getattr(board, self.GENERIC_GPIO__A_PIN_1.data)
+                        except AttributeError:
+                            self.GENERIC_GPIO__A_PIN_1.errors.append('PIN {0:s} not valid for your system'.format(self.GENERIC_GPIO__A_PIN_1.data))
+                            result = False
+                    else:
+                        self.GENERIC_GPIO__A_PIN_1.errors.append('PIN must be defined')
+                        result = False
+
+                except ImportError:
+                    self.GENERIC_GPIO__A_CLASSNAME.errors.append('GPIO python modules not installed')
+                    result = False
+
+                except PermissionError:
+                    self.GENERIC_GPIO__A_PIN_1.errors.append('GPIO permissions need to be fixed')
+                    result = False
+
+
+        # sensor A
+        if self.TEMP_SENSOR__A_CLASSNAME.data:
+            if self.TEMP_SENSOR__A_CLASSNAME.data.startswith('blinka_'):
+                try:
+                    import board
+
+                    if self.TEMP_SENSOR__A_PIN_1.data:
+                        try:
+                            getattr(board, self.TEMP_SENSOR__A_PIN_1.data)
+                        except AttributeError:
+                            self.TEMP_SENSOR__A_PIN_1.errors.append('PIN {0:s} not valid for your system'.format(self.TEMP_SENSOR__A_PIN_1.data))
+                            result = False
+                    else:
+                        self.TEMP_SENSOR__A_PIN_1.errors.append('PIN must be defined')
+                        result = False
+
+                except ImportError:
+                    self.TEMP_SENSOR__A_CLASSNAME.errors.append('GPIO python modules not installed')
+                    result = False
+
+                except PermissionError:
+                    self.TEMP_SENSOR__A_PIN_1.errors.append('GPIO permissions need to be fixed')
+                    result = False
+
+            elif self.TEMP_SENSOR__A_CLASSNAME.data.startswith('cpads_'):
+                try:
+                    import adafruit_ads1x15.ads1115 as ADS
+
+                    if self.TEMP_SENSOR__A_PIN_1.data:
+                        try:
+                            getattr(ADS, self.TEMP_SENSOR__A_PIN_1.data)
+                        except AttributeError:
+                            self.TEMP_SENSOR__A_PIN_1.errors.append('PIN {0:s} not valid for your system'.format(self.TEMP_SENSOR__A_PIN_1.data))
+                            result = False
+                    else:
+                        self.TEMP_SENSOR__A_PIN_1.errors.append('PIN must be defined')
+                        result = False
+
+                except ImportError:
+                    self.TEMP_SENSOR__A_CLASSNAME.errors.append('GPIO python modules not installed')
+                    result = False
+
+
+        # sensor B
+        if self.TEMP_SENSOR__B_CLASSNAME.data:
+            if self.TEMP_SENSOR__B_CLASSNAME.data.startswith('blinka_'):
+                try:
+                    import board
+
+                    if self.TEMP_SENSOR__B_PIN_1.data:
+                        try:
+                            getattr(board, self.TEMP_SENSOR__B_PIN_1.data)
+                        except AttributeError:
+                            self.TEMP_SENSOR__B_PIN_1.errors.append('PIN {0:s} not valid for your system'.format(self.TEMP_SENSOR__B_PIN_1.data))
+                            result = False
+                    else:
+                        self.TEMP_SENSOR__B_PIN_1.errors.append('PIN must be defined')
+                        result = False
+
+                except ImportError:
+                    self.TEMP_SENSOR__B_CLASSNAME.errors.append('GPIO python modules not installed')
+                    result = False
+
+                except PermissionError:
+                    self.TEMP_SENSOR__B_PIN_1.errors.append('GPIO permissions need to be fixed')
+                    result = False
+
+            elif self.TEMP_SENSOR__B_CLASSNAME.data.startswith('cpads_'):
+                try:
+                    import adafruit_ads1x15.ads1115 as ADS
+
+                    if self.TEMP_SENSOR__B_PIN_1.data:
+                        try:
+                            getattr(ADS, self.TEMP_SENSOR__B_PIN_1.data)
+                        except AttributeError:
+                            self.TEMP_SENSOR__B_PIN_1.errors.append('PIN {0:s} not valid for your system'.format(self.TEMP_SENSOR__B_PIN_1.data))
+                            result = False
+                    else:
+                        self.TEMP_SENSOR__B_PIN_1.errors.append('PIN must be defined')
+                        result = False
+
+                except ImportError:
+                    self.TEMP_SENSOR__B_CLASSNAME.errors.append('GPIO python modules not installed')
+                    result = False
+
+
+        # sensor C
+        if self.TEMP_SENSOR__C_CLASSNAME.data:
+            if self.TEMP_SENSOR__C_CLASSNAME.data.startswith('blinka_'):
+                try:
+                    import board
+
+                    if self.TEMP_SENSOR__C_PIN_1.data:
+                        try:
+                            getattr(board, self.TEMP_SENSOR__C_PIN_1.data)
+                        except AttributeError:
+                            self.TEMP_SENSOR__C_PIN_1.errors.append('PIN {0:s} not valid for your system'.format(self.TEMP_SENSOR__C_PIN_1.data))
+                            result = False
+                    else:
+                        self.TEMP_SENSOR__C_PIN_1.errors.append('PIN must be defined')
+                        result = False
+
+                except ImportError:
+                    self.TEMP_SENSOR__C_CLASSNAME.errors.append('GPIO python modules not installed')
+                    result = False
+
+                except PermissionError:
+                    self.TEMP_SENSOR__C_PIN_1.errors.append('GPIO permissions need to be fixed')
+                    result = False
+
+            elif self.TEMP_SENSOR__C_CLASSNAME.data.startswith('cpads_'):
+                try:
+                    import adafruit_ads1x15.ads1115 as ADS
+
+                    if self.TEMP_SENSOR__C_PIN_1.data:
+                        try:
+                            getattr(ADS, self.TEMP_SENSOR__C_PIN_1.data)
+                        except AttributeError:
+                            self.TEMP_SENSOR__C_PIN_1.errors.append('PIN {0:s} not valid for your system'.format(self.TEMP_SENSOR__C_PIN_1.data))
+                            result = False
+                    else:
+                        self.TEMP_SENSOR__C_PIN_1.errors.append('PIN must be defined')
+                        result = False
+
+                except ImportError:
+                    self.TEMP_SENSOR__C_CLASSNAME.errors.append('GPIO python modules not installed')
+                    result = False
 
 
         return result
@@ -4273,10 +5177,25 @@ class IndiAllskyImageExcludeForm(FlaskForm):
         super(IndiAllskyImageExcludeForm, self).__init__(*args, **kwargs)
 
 
+class IndiAllskyFocusControllerForm(FlaskForm):
+    STEP_DEGREES_choices = (
+        (6, '6 degrees'),
+        (12, '12 Degrees'),
+        (24, '24 Degrees'),
+        (45, '45 Degrees'),
+        (90, '90 Degrees'),
+        (180, '180 Degrees'),
+    )
+
+    DIRECTION           = StringField('Direction')
+    STEP_DEGREES        = SelectField('Degrees', choices=STEP_DEGREES_choices, default=STEP_DEGREES_choices[2][0], validators=[])
+
+
 class IndiAllskyImageProcessingForm(FlaskForm):
     DISABLE_PROCESSING               = BooleanField('Disable processing')
     CAMERA_ID                        = HiddenField('Camera ID', validators=[DataRequired()])
     FITS_ID                          = HiddenField('FITS ID', validators=[DataRequired()])
+    IMAGE_CALIBRATE_DARK             = BooleanField('Dark Frame Calibration')
     CCD_BIT_DEPTH                    = SelectField('Camera Bit Depth', choices=IndiAllskyConfigForm.CCD_BIT_DEPTH_choices, validators=[CCD_BIT_DEPTH_validator])
     NIGHT_CONTRAST_ENHANCE           = BooleanField('Contrast Enhance')
     CONTRAST_ENHANCE_16BIT           = BooleanField('16-bit Contrast Enhance')
@@ -4315,6 +5234,7 @@ class IndiAllskyImageProcessingForm(FlaskForm):
     FISH2PANO__OFFSET_Y              = IntegerField('Y Offset', validators=[FISH2PANO__OFFSET_Y_validator])
     FISH2PANO__ROTATE_ANGLE          = IntegerField('Rotation Angle', validators=[FISH2PANO__ROTATE_ANGLE_validator])
     FISH2PANO__SCALE                 = FloatField('Scale', validators=[FISH2PANO__SCALE_validator])
+    FISH2PANO__FLIP_H                = BooleanField('Flip Horizontally')
     #IMAGE_STACK_SPLIT                = BooleanField('Stack split screen')
     PROCESSING_SPLIT_SCREEN          = BooleanField('Split screen')
 
@@ -4333,6 +5253,7 @@ class IndiAllskyCameraSimulatorForm(FlaskForm):
             ('imx287', 'IMX287 - 1/2.9"'),
             ('imx290', 'IMX290 - 1/2.8"'),
             ('imx296', 'IMX296 - 1/2.9" - Global Shutter'),
+            ('imx298', 'IMX298 - 1/2.8"'),
             ('imx307', 'IMX307 - 1/2.8" - SV105C'),
             ('imx327', 'IMX327 - 1/2.8"'),
             ('imx415', 'IMX415 - 1/2.8"'),
@@ -4363,23 +5284,29 @@ class IndiAllskyCameraSimulatorForm(FlaskForm):
             ('imx464', 'IMX464 - 1/1.8" - POA Neptune-C II'),
             ('imx664', 'IMX664 - 1/1.8" - POA Neptune 664C'),
             ('imx678', 'IMX678 - 1/1.8"'),
+            ('imx682', 'IMX682 - 1/1.7" - 64MP Hawkeye'),
             ('sc2210', 'SC2210 - 1/1.8" - ASI220'),
+        ),
+        'Medium - 10-13mm Class' : (
+            ('ov64a40', 'OV64A40 - 1/1.32 - 64MP OwlSight'),
+            ('imx250', 'IMX250 - 2/3"'),
+            ('imx264', 'IMX264 - 2/3"'),
+            ('imx429', 'IMX429 - 2/3" - POA Apollo-M MINI'),
+            ('imx482', 'IMX482 - 1/1.2"'),
+            ('imx485', 'IMX485 - 1/1.2"'),
+            ('imx585', 'IMX585 - 1/1.2"'),
+            ('imx676', 'IMX676 - 1/1.6"'),
+            ('icx825al', 'ICX825AL - 2/3" - SX ULTRASTAR PRO'),
         ),
         'Large' : (
             ('imx174', 'IMX174 - 1/1.2"'),
             ('imx183', 'IMX183 - 1"'),
-            ('imx253', 'IMX253 - 1.1"'),
             ('imx249', 'IMX249 - 1/1.2" - POA Xena-M'),
-            ('imx250', 'IMX250 - 2/3"'),
-            ('imx264', 'IMX264 - 2/3"'),
+            ('imx253', 'IMX253 - 1.1"'),
+            ('imx283', 'IMX283 - 1" - Arducam Klarity'),
             ('imx304', 'IMX304 - 1.1"'),
-            ('imx429', 'IMX429 - 2/3" - POA Apollo-M MINI'),
             ('imx432', 'IMX432 - 1.1"'),
-            ('imx482', 'IMX482 - 1/1.2"'),
-            ('imx485', 'IMX485 - 1/1.2"'),
             ('imx533', 'IMX533 - 1"'),
-            ('imx585', 'IMX585 - 1/1.2"'),
-            ('icx825al', 'ICX825AL - 2/3" - SX ULTRASTAR PRO'),
         ),
         'Extra Large' : (
             ('imx269', 'IMX269 - 4/3"'),
@@ -4390,22 +5317,28 @@ class IndiAllskyCameraSimulatorForm(FlaskForm):
         ),
     }
 
-    LENS_SELECT_choices = (
-        ('zwo_f2.0_2.1mm_1-3', 'ZWO 2.1mm ƒ/2.0 - 150° - 1/3" ∅6.7mm'),
-        ('zwo_f1.2_2.5mm_1-2', 'ZWO 2.5mm ƒ/1.2 - 170° - 1/2" ∅6.7mm'),
-        ('arecont_f2.0_1.55mm_1-2', 'Arecont 1.55mm ƒ/2.0 - 180° - 1/2" ∅4.8mm'),
-        ('stardot_f1.5_1.55mm_1-2', 'Stardot 1.55mm ƒ/1.5 - 180° - 1/2" ∅4.8mm'),
-        ('m12_f2.1_0.76mm_1-3.2', 'M12 0.76mm ƒ/2.1 - 222° - 1/3.2" ∅2.77mm'),
-        ('m12_f2.0_1.44mm_1-2.5', 'M12 1.44mm ƒ/2.0 - 180° - 1/2.5" ∅3.55mm'),
-        ('m12_f2.0_1.56mm_1-2.5', 'M12 1.56mm ƒ/2.0 - 185° - 1/2.5" ∅4.8mm'),
-        ('m12_f2.0_1.7mm_1-2.5', 'M12 1.7mm ƒ/2.0 - 180° - 1/2.5" ∅5.6mm'),
-        ('m12_f2.2_1.71mm_1-3', 'M12 1.71mm ƒ/2.2 - 184° - 1/3" ∅3.5mm'),
-        ('m12_f2.4_1.8mm_1-4', 'M12 1.8mm ƒ/2.4 - 125° - 1/4" ∅4.8mm'),
-        ('m12_f2.0_1.8mm_1-2.5', 'M12 1.8mm ƒ/2.0 - 180° - 1/2.5" ∅6.9mm'),
-        ('m12_f2.0_2.1mm_1-2.7', 'M12 2.1mm ƒ/2.0 - 170° - 1/2.7" ∅6.7mm'),
-        ('meike_f2.8_3.5mm_4-3', 'Meike 3.5mm ƒ/2.8 Fisheye - 220° - 4/3" ∅12.5mm'),
-        ('custom_f7_5.8mm_m42', 'Custom 5.8mm ƒ/7 - 174° - ∅17.3mm'),
-    )
+    LENS_SELECT_choices = {
+        'Small' : (
+            ('m12_f2.1_0.76mm_1-3.2', 'M12 0.76mm ƒ/2.1 - 222° - 1/3.2" ∅2.77mm'),
+            ('m12_f2.2_1.71mm_1-3', 'M12 1.71mm ƒ/2.2 - 184° - 1/3" ∅3.5mm'),
+            ('m12_f2.0_1.44mm_1-2.5', 'M12 1.44mm ƒ/2.0 - 180° - 1/2.5" ∅3.55mm'),
+        ),
+        'Medium' : (
+            ('arecont_f2.0_1.55mm_1-2', 'Arecont 1.55mm ƒ/2.0 - 180° - 1/2" ∅4.8mm'),
+            ('stardot_f1.5_1.55mm_1-2', 'Stardot 1.55mm ƒ/1.5 - 180° - 1/2" ∅4.8mm'),
+            ('m12_f2.4_1.8mm_1-4', 'M12 1.8mm ƒ/2.4 - 125° - 1/4" ∅4.8mm'),
+            ('m12_f2.0_1.56mm_1-2.5', 'M12 1.56mm ƒ/2.0 - 185° - 1/2.5" ∅4.8mm'),
+            ('m12_f2.0_1.7mm_1-2.5', 'M12 1.7mm ƒ/2.0 - 180° - 1/2.5" ∅5.6mm'),
+            ('zwo_f2.0_2.1mm_1-3', 'ZWO 2.1mm ƒ/2.0 - 150° - 1/3" ∅6.7mm'),
+            ('zwo_f1.2_2.5mm_1-2', 'ZWO 2.5mm ƒ/1.2 - 170° - 1/2" ∅6.7mm'),
+            ('m12_f2.0_2.1mm_1-2.7', 'M12 2.1mm ƒ/2.0 - 170° - 1/2.7" ∅6.7mm'),
+            ('m12_f2.0_1.8mm_1-2.5', 'M12 1.8mm ƒ/2.0 - 180° - 1/2.5" ∅6.9mm'),
+        ),
+        'Large' : (
+            ('meike_f2.8_3.5mm_4-3', 'Meike 3.5mm ƒ/2.8 Fisheye - 220° - 4/3" ∅12.5mm'),
+            ('custom_f7_5.8mm_m42', 'Custom 5.8mm ƒ/7 - 174° - ∅17.3mm'),
+        ),
+    }
 
     SENSOR_SELECT     = SelectField('Sensor', choices=SENSOR_SELECT_choices)
     LENS_SELECT       = SelectField('Lens', choices=LENS_SELECT_choices)
