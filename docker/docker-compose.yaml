@@ -74,10 +74,10 @@ services:
       - mariadb.indi.allsky
       - indiserver.indi.allsky
       - indi.allsky.base
-    #privileged: true  # enable for libcamera
+    privileged: true  # enable for libcamera
     volumes:
       - images_indi_allsky:/var/www/html/allsky
-      #- /run/udev:/run/udev:ro  # enable for libcamera
+      - /run/udev:/run/udev:ro  # enable for libcamera
 
 
   webserver.indi.allsky:
