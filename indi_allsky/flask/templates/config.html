@@ -380,7 +380,10 @@
             {{ form_config.TEMP_DISPLAY(class='form-select bg-secondary') }}
             <div id="TEMP_DISPLAY-error" class="invalid-feedback text-danger" style="display: none;"></div>
         </div>
-        <div class="col-sm-8">Temperature units for display</div>
+        <div class="col-sm-8">
+            <div>Temperature units for display</div>
+            <div><span class="badge rounded-pill bg-info text-dark">Note</span> Adjusts sensor units.</div>
+        </div>
     </div>
 
     <div class="form-group row">
@@ -466,6 +469,35 @@
 
     <div class="form-group row">
         <div class="col-sm-2">
+            {{ form_config.LIBCAMERA__EXTRA_OPTIONS.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-5">
+            {{ form_config.LIBCAMERA__EXTRA_OPTIONS(class='form-control bg-secondary') }}
+            <div id="LIBCAMERA__EXTRA_OPTIONS-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-5">
+            <div>Extra options for libcamera-still.</div>
+            <div><a href="https://github.com/aaronwmorris/indi-allsky/wiki/libcamera-enablement#customizations" class="text-decoration-none link-info" target="_blank">libcamera customizations Wiki</a></div>
+            <div><span class="badge rounded-pill bg-warning text-dark">Warning</span> Options are not validated</div>
+        </div>
+    </div>
+
+    <hr>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.LIBCAMERA__IMAGE_FILE_TYPE_DAY.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-2">
+            {{ form_config.LIBCAMERA__IMAGE_FILE_TYPE_DAY(class='form-select bg-secondary') }}
+            <div id="LIBCAMERA__IMAGE_FILE_TYPE_DAY-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-8">
+        </div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
             {{ form_config.LIBCAMERA__AWB_ENABLE_DAY.label }}
         </div>
         <div class="col-sm-2">
@@ -487,21 +519,6 @@
             <div id="LIBCAMERA__AWB_DAY-error" class="invalid-feedback text-danger" style="display: none;"></div>
         </div>
         <div class="col-sm-8">
-        </div>
-    </div>
-
-    <div class="form-group row">
-        <div class="col-sm-2">
-            {{ form_config.LIBCAMERA__EXTRA_OPTIONS.label(class='col-form-label') }}
-        </div>
-        <div class="col-sm-5">
-            {{ form_config.LIBCAMERA__EXTRA_OPTIONS(class='form-control bg-secondary') }}
-            <div id="LIBCAMERA__EXTRA_OPTIONS-error" class="invalid-feedback text-danger" style="display: none;"></div>
-        </div>
-        <div class="col-sm-5">
-            <div>Extra options for libcamera-still.</div>
-            <div><a href="https://github.com/aaronwmorris/indi-allsky/wiki/libcamera-enablement#customizations" class="text-decoration-none link-info" target="_blank">libcamera customizations Wiki</a></div>
-            <div><span class="badge rounded-pill bg-warning text-dark">Warning</span> Options are not validated</div>
         </div>
     </div>
 
@@ -677,6 +694,100 @@
             </div>
         </div>
         <div class="col-sm-8">Disable if you want to include hot pixels your final image</div>
+    </div>
+
+    <hr>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.TARGET_ADU.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-2">
+            {{ form_config.TARGET_ADU(class='form-control bg-secondary') }}
+            <div id="TARGET_ADU-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-8">
+            <div>Target Average Image Brightness - Max value: 255</div>
+            <div>Default: 75 (~30% of histogram)</div>
+        </div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.TARGET_ADU_DAY.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-2">
+            {{ form_config.TARGET_ADU_DAY(class='form-control bg-secondary') }}
+            <div id="TARGET_ADU_DAY-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-8">
+        </div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.TARGET_ADU_DEV.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-2">
+            {{ form_config.TARGET_ADU_DEV(class='form-control bg-secondary') }}
+            <div id="TARGET_ADU_DEV-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-8">Allowed Brightness deviation</div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.TARGET_ADU_DEV_DAY.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-2">
+            {{ form_config.TARGET_ADU_DEV_DAY(class='form-control bg-secondary') }}
+            <div id="TARGET_ADU_DEV_DAY-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-8">Allowed Brightness deviation.  Setting this value too low can cause exposure flapping.</div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.ADU_FOV_DIV.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-2">
+            {{ form_config.ADU_FOV_DIV(class='form-select bg-secondary') }}
+            <div id="ADU_FOV_DIV-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-8">Central region to use for ADU calculations (not used if ROI defined)</div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2 col-form-label">
+            ADU Region of Interest
+        </div>
+        <div class="col-sm-2">
+            {{ form_config.ADU_ROI_X1(class='form-control bg-secondary') }}
+            <div id="ADU_ROI_X1-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+
+        <div class="col-sm-2">
+            {{ form_config.ADU_ROI_Y1(class='form-control bg-secondary') }}
+            <div id="ADU_ROI_Y1-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-6">
+            <div>x1, y1</div>
+            <div>* Not used if Detection Mask is defined *</div>
+        </div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2 col-form-label"></div>
+        <div class="col-sm-2">
+            {{ form_config.ADU_ROI_X2(class='form-control bg-secondary') }}
+            <div id="ADU_ROI_X2-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+
+        <div class="col-sm-2">
+            {{ form_config.ADU_ROI_Y2(class='form-control bg-secondary') }}
+            <div id="ADU_ROI_Y2-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-6">x2, y2</div>
     </div>
 
     <hr>
@@ -913,96 +1024,6 @@
             <div id="SATURATION_FACTOR-error" class="invalid-feedback text-danger" style="display: none;"></div>
         </div>
         <div class="col-sm-8">1.0 is disabled.  1.5 is a good starting point</div>
-    </div>
-
-    <hr>
-
-    <div class="form-group row">
-        <div class="col-sm-2">
-            {{ form_config.TARGET_ADU.label(class='col-form-label') }}
-        </div>
-        <div class="col-sm-2">
-            {{ form_config.TARGET_ADU(class='form-control bg-secondary') }}
-            <div id="TARGET_ADU-error" class="invalid-feedback text-danger" style="display: none;"></div>
-        </div>
-        <div class="col-sm-8">Target Image Brightness</div>
-    </div>
-
-    <div class="form-group row">
-        <div class="col-sm-2">
-            {{ form_config.TARGET_ADU_DAY.label(class='col-form-label') }}
-        </div>
-        <div class="col-sm-2">
-            {{ form_config.TARGET_ADU_DAY(class='form-control bg-secondary') }}
-            <div id="TARGET_ADU_DAY-error" class="invalid-feedback text-danger" style="display: none;"></div>
-        </div>
-        <div class="col-sm-8"></div>
-    </div>
-
-    <div class="form-group row">
-        <div class="col-sm-2">
-            {{ form_config.TARGET_ADU_DEV.label(class='col-form-label') }}
-        </div>
-        <div class="col-sm-2">
-            {{ form_config.TARGET_ADU_DEV(class='form-control bg-secondary') }}
-            <div id="TARGET_ADU_DEV-error" class="invalid-feedback text-danger" style="display: none;"></div>
-        </div>
-        <div class="col-sm-8">Allowed Brightness deviation</div>
-    </div>
-
-    <div class="form-group row">
-        <div class="col-sm-2">
-            {{ form_config.TARGET_ADU_DEV_DAY.label(class='col-form-label') }}
-        </div>
-        <div class="col-sm-2">
-            {{ form_config.TARGET_ADU_DEV_DAY(class='form-control bg-secondary') }}
-            <div id="TARGET_ADU_DEV_DAY-error" class="invalid-feedback text-danger" style="display: none;"></div>
-        </div>
-        <div class="col-sm-8">Allowed Brightness deviation.  Setting this value too low can cause exposure flapping.</div>
-    </div>
-
-    <div class="form-group row">
-        <div class="col-sm-2">
-            {{ form_config.ADU_FOV_DIV.label(class='col-form-label') }}
-        </div>
-        <div class="col-sm-2">
-            {{ form_config.ADU_FOV_DIV(class='form-select bg-secondary') }}
-            <div id="ADU_FOV_DIV-error" class="invalid-feedback text-danger" style="display: none;"></div>
-        </div>
-        <div class="col-sm-8">Central region to use for ADU calculations (not used if ROI defined)</div>
-    </div>
-
-    <div class="form-group row">
-        <div class="col-sm-2 col-form-label">
-            ADU Region of Interest
-        </div>
-        <div class="col-sm-2">
-            {{ form_config.ADU_ROI_X1(class='form-control bg-secondary') }}
-            <div id="ADU_ROI_X1-error" class="invalid-feedback text-danger" style="display: none;"></div>
-        </div>
-
-        <div class="col-sm-2">
-            {{ form_config.ADU_ROI_Y1(class='form-control bg-secondary') }}
-            <div id="ADU_ROI_Y1-error" class="invalid-feedback text-danger" style="display: none;"></div>
-        </div>
-        <div class="col-sm-6">
-            <div>x1, y1</div>
-            <div>* Not used if Detection Mask is defined *</div>
-        </div>
-    </div>
-
-    <div class="form-group row">
-        <div class="col-sm-2 col-form-label"></div>
-        <div class="col-sm-2">
-            {{ form_config.ADU_ROI_X2(class='form-control bg-secondary') }}
-            <div id="ADU_ROI_X2-error" class="invalid-feedback text-danger" style="display: none;"></div>
-        </div>
-
-        <div class="col-sm-2">
-            {{ form_config.ADU_ROI_Y2(class='form-control bg-secondary') }}
-            <div id="ADU_ROI_Y2-error" class="invalid-feedback text-danger" style="display: none;"></div>
-        </div>
-        <div class="col-sm-6">x2, y2</div>
     </div>
 
     <hr>
@@ -1872,31 +1893,6 @@
         </div>
         <div class="col-sm-2"></div>
     </div>
-
-    <hr>
-
-    <div class="form-group row">
-        <div class="col-sm-2">
-            {{ form_config.IMAGE_EXPIRE_DAYS.label(class='col-form-label') }}
-        </div>
-        <div class="col-sm-2">
-            {{ form_config.IMAGE_EXPIRE_DAYS(class='form-control bg-secondary') }}
-            <div id="IMAGE_EXPIRE_DAYS-error" class="invalid-feedback text-danger" style="display: none;"></div>
-        </div>
-        <div class="col-sm-8">Maximum age of original image files before deletion</div>
-    </div>
-
-    <div class="form-group row">
-        <div class="col-sm-2">
-            {{ form_config.TIMELAPSE_EXPIRE_DAYS.label(class='col-form-label') }}
-        </div>
-        <div class="col-sm-2">
-            {{ form_config.TIMELAPSE_EXPIRE_DAYS(class='form-control bg-secondary') }}
-            <div id="TIMELAPSE_EXPIRE_DAYS-error" class="invalid-feedback text-danger" style="display: none;"></div>
-        </div>
-        <div class="col-sm-8">Maximum age of timelapse, keogram, and star trails before deletion</div>
-    </div>
-
 
 </div><!-- end image tab -->
 <div class="tab-pane fade" id="nav-processing" role="tabpanel" aria-labelledby="nav-processing-tab">
@@ -2810,15 +2806,24 @@
 
     <div class="form-group row">
         <div class="col-sm-2">
-            {{ form_config.ENCRYPT_PASSWORDS.label }}
+            {{ form_config.IMAGE_EXPIRE_DAYS.label(class='col-form-label') }}
         </div>
         <div class="col-sm-2">
-            <div class="form-switch">
-                {{ form_config.ENCRYPT_PASSWORDS(class='form-check-input') }}
-                <div id="ENCRYPT_PASSWORDS-error" class="invalid-feedback text-danger" style="display: none;"></div>
-            </div>
+            {{ form_config.IMAGE_EXPIRE_DAYS(class='form-control bg-secondary') }}
+            <div id="IMAGE_EXPIRE_DAYS-error" class="invalid-feedback text-danger" style="display: none;"></div>
         </div>
-        <div class="col-sm-8">Encrypt passwords in the database</div>
+        <div class="col-sm-8">Maximum age of original image files before deletion</div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.TIMELAPSE_EXPIRE_DAYS.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-2">
+            {{ form_config.TIMELAPSE_EXPIRE_DAYS(class='form-control bg-secondary') }}
+            <div id="TIMELAPSE_EXPIRE_DAYS-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-8">Maximum age of timelapse, keogram, and star trails before deletion</div>
     </div>
 
     <hr>
@@ -2978,6 +2983,21 @@
             <div>Local interface subnets are automatically added to this list</div>
             <div>(Additions may be made in /etc/indi-allsky/flask.json)</div>
         </div>
+    </div>
+
+    <hr>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.ENCRYPT_PASSWORDS.label }}
+        </div>
+        <div class="col-sm-2">
+            <div class="form-switch">
+                {{ form_config.ENCRYPT_PASSWORDS(class='form-check-input') }}
+                <div id="ENCRYPT_PASSWORDS-error" class="invalid-feedback text-danger" style="display: none;"></div>
+            </div>
+        </div>
+        <div class="col-sm-8">Encrypt passwords in the database</div>
     </div>
 
 </div><!-- end admin tab -->
@@ -4241,6 +4261,10 @@
 
     <hr>
 
+    <div><span class="badge rounded-pill bg-info text-dark">Note</span> Sensor units may be adjusted using the Temperature Display option on the Camera Tab</div>
+
+    <hr>
+
     <div class="form-group row">
         <div class="col-sm-2">
             {{ form_config.TEMP_SENSOR__A_CLASSNAME.label(class='col-form-label') }}
@@ -4455,6 +4479,19 @@
         </div>
     </div>
 
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.TEMP_SENSOR__WUNDERGROUND_APIKEY.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-4">
+            {{ form_config.TEMP_SENSOR__WUNDERGROUND_APIKEY(class='form-control bg-secondary') }}
+            <div id="TEMP_SENSOR__WUNDERGROUND_APIKEY-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-6">
+            <div></div>
+        </div>
+    </div>
+
     <hr>
 
     <div class="form-group row">
@@ -4567,6 +4604,60 @@
 
     <div class="form-group row">
         <div class="col-sm-2">
+            {{ form_config.TEMP_SENSOR__VEML7700_GAIN_NIGHT.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-4">
+            {{ form_config.TEMP_SENSOR__VEML7700_GAIN_NIGHT(class='form-select bg-secondary') }}
+            <div id="TEMP_SENSOR__VEML7700_GAIN_NIGHT-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-6">
+            <div></div>
+        </div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.TEMP_SENSOR__VEML7700_GAIN_DAY.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-4">
+            {{ form_config.TEMP_SENSOR__VEML7700_GAIN_DAY(class='form-select bg-secondary') }}
+            <div id="TEMP_SENSOR__VEML7700_GAIN_DAY-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-6">
+            <div></div>
+        </div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.TEMP_SENSOR__VEML7700_INT_NIGHT.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-4">
+            {{ form_config.TEMP_SENSOR__VEML7700_INT_NIGHT(class='form-select bg-secondary') }}
+            <div id="TEMP_SENSOR__VEML7700_INT_NIGHT-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-6">
+            <div></div>
+        </div>
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
+            {{ form_config.TEMP_SENSOR__VEML7700_INT_DAY.label(class='col-form-label') }}
+        </div>
+        <div class="col-sm-4">
+            {{ form_config.TEMP_SENSOR__VEML7700_INT_DAY(class='form-select bg-secondary') }}
+            <div id="TEMP_SENSOR__VEML7700_INT_DAY-error" class="invalid-feedback text-danger" style="display: none;"></div>
+        </div>
+        <div class="col-sm-6">
+            <div></div>
+        </div>
+    </div>
+
+    <hr>
+
+    <div class="form-group row">
+        <div class="col-sm-2">
             {{ form_config.TEMP_SENSOR__MQTT_HOST.label(class='col-form-label') }}
         </div>
         <div class="col-sm-4">
@@ -4653,6 +4744,10 @@
     <hr>
 
     <div><span class="badge rounded-pill bg-info text-dark">Note</span> Hardware Device support requires the Adafruit-Blinka module</div>
+
+    <hr>
+
+    <div><span class="badge rounded-pill bg-info text-dark">Note</span> Sensor units may be in either Celcius or Fahrenheit based on the Temperature Display option on the Camera Tab</div>
 
     <hr>
 
@@ -5430,6 +5525,7 @@ const field_names = [
     'ADMIN_NETWORKS_FLASK',
     'LIBCAMERA__CAMERA_ID',
     'LIBCAMERA__IMAGE_FILE_TYPE',
+    'LIBCAMERA__IMAGE_FILE_TYPE_DAY',
     'LIBCAMERA__AWB',
     'LIBCAMERA__AWB_DAY',
     'LIBCAMERA__EXTRA_OPTIONS',
@@ -5483,6 +5579,7 @@ const field_names = [
     'TEMP_SENSOR__C_USER_VAR_SLOT',
     'TEMP_SENSOR__C_I2C_ADDRESS',
     'TEMP_SENSOR__OPENWEATHERMAP_APIKEY',
+    'TEMP_SENSOR__WUNDERGROUND_APIKEY',
     'TEMP_SENSOR__MQTT_TRANSPORT',
     'TEMP_SENSOR__MQTT_HOST',
     'TEMP_SENSOR__MQTT_PORT',
@@ -5496,6 +5593,10 @@ const field_names = [
     'TEMP_SENSOR__TSL2591_GAIN_DAY',
     'TEMP_SENSOR__TSL2591_INT_NIGHT',
     'TEMP_SENSOR__TSL2591_INT_DAY',
+    'TEMP_SENSOR__VEML7700_GAIN_NIGHT',
+    'TEMP_SENSOR__VEML7700_GAIN_DAY',
+    'TEMP_SENSOR__VEML7700_INT_NIGHT',
+    'TEMP_SENSOR__VEML7700_INT_DAY',
     'INDI_CONFIG_DEFAULTS',
     'INDI_CONFIG_DAY',
     'CONFIG_NOTE',

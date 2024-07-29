@@ -3,6 +3,7 @@
 #set -x  # command tracing
 set -o errexit
 set -o nounset
+shopt -s nullglob
 
 PATH=/usr/local/bin:/usr/bin:/bin
 export PATH
@@ -127,6 +128,13 @@ echo "sysctl info"
 /usr/sbin/sysctl vm.swappiness
 
 echo
+echo "Thermal info"
+for X in /sys/class/thermal/thermal_zone*; do
+    [ -f "$X/type" ] && cat "$X/type"
+    [ -f "$X/temp" ] && cat "$X/temp"
+done
+
+echo
 echo "system python: $(python3 -V)"
 
 echo
@@ -151,6 +159,11 @@ echo
 echo "Process info"
 # shellcheck disable=SC2009
 ps auxwww | grep indi | grep -v grep || true
+echo
+
+echo "Check for virtual sessions"
+# shellcheck disable=SC2009
+ps auxwww | grep -i "screen\|tmux\|byobu" | grep -v grep || true
 echo
 
 echo "USB info"
@@ -279,7 +292,7 @@ if [ -d "${ALLSKY_DIRECTORY}/virtualenv/indi-allsky" ]; then
 
     echo "\`\`\`json"  # markdown
     # Remove all secrets from config
-    echo "$INDI_ALLSKY_CONFIG" | jq --arg redacted "REDACTED" '.FILETRANSFER.PASSWORD = $redacted | .FILETRANSFER.PASSWORD_E = $redacted | .S3UPLOAD.SECRET_KEY = $redacted | .S3UPLOAD.SECRET_KEY_E = $redacted | .MQTTPUBLISH.PASSWORD = $redacted | .MQTTPUBLISH.PASSWORD_E = $redacted | .SYNCAPI.APIKEY = $redacted | .SYNCAPI.APIKEY_E = $redacted | .PYCURL_CAMERA.PASSWORD = $redacted | .PYCURL_CAMERA.PASSWORD_E = $redacted | .TEMP_SENSOR.OPENWEATHERMAP_APIKEY = $redacted | .TEMP_SENSOR.OPENWEATHERMAP_APIKEY_E = $redacted | .TEMP_SENSOR.MQTT_PASSWORD = $redacted | .TEMP_SENSOR.MQTT_PASSWORD_E = $redacted'
+    echo "$INDI_ALLSKY_CONFIG" | jq --arg redacted "REDACTED" '.OWNER = $redacted | .FILETRANSFER.PASSWORD = $redacted | .FILETRANSFER.PASSWORD_E = $redacted | .S3UPLOAD.SECRET_KEY = $redacted | .S3UPLOAD.SECRET_KEY_E = $redacted | .MQTTPUBLISH.PASSWORD = $redacted | .MQTTPUBLISH.PASSWORD_E = $redacted | .SYNCAPI.APIKEY = $redacted | .SYNCAPI.APIKEY_E = $redacted | .PYCURL_CAMERA.PASSWORD = $redacted | .PYCURL_CAMERA.PASSWORD_E = $redacted | .TEMP_SENSOR.OPENWEATHERMAP_APIKEY = $redacted | .TEMP_SENSOR.OPENWEATHERMAP_APIKEY_E = $redacted | .TEMP_SENSOR.WUNDERGROUND_APIKEY = $redacted | .TEMP_SENSOR.WUNDERGROUND_APIKEY_E = $redacted | .TEMP_SENSOR.MQTT_PASSWORD = $redacted | .TEMP_SENSOR.MQTT_PASSWORD_E = $redacted'
 
     deactivate
     echo

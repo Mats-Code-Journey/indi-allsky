@@ -200,6 +200,7 @@ class CaptureWorker(Process):
         exposure_state = 'unset'
         check_exposure_state = time.time() + 300  # check in 5 minutes
 
+        self.reconfigure_camera = True  # reconfigure on first run
 
         next_forced_transition_time = self._dateCalcs.getNextDayNightTransition().timestamp()
         logger.warning(
@@ -260,6 +261,8 @@ class CaptureWorker(Process):
 
 
                     if not self.night and self.generate_timelapse_flag:
+                        self._expireData(self.camera_id)  # cleanup old images and folders
+
                         ### Generate timelapse at end of night
                         yesterday_ref = dayDate - timedelta(days=1)
                         timespec = yesterday_ref.strftime('%Y%m%d')
@@ -268,14 +271,16 @@ class CaptureWorker(Process):
                         self._uploadAllskyEndOfNight(self.camera_id)
 
                     elif self.night and self.generate_timelapse_flag:
+                        self._expireData(self.camera_id)  # cleanup old images and folders
+
                         ### Generate timelapse at end of day
                         today_ref = dayDate
                         timespec = today_ref.strftime('%Y%m%d')
                         self._generateDayTimelapse(timespec, self.camera_id)
                         self._generateDayKeogram(timespec, self.camera_id)
-                        self._expireData(self.camera_id)  # cleanup old images and folders
 
                 elif self.night and bool(self.moonmode_v.value) != self.moonmode:
+                    # Switch between night non-moonmode and moonmode
                     self.reconfigure_camera = True
 
                 elif loop_start_time > next_forced_transition_time:
@@ -302,6 +307,8 @@ class CaptureWorker(Process):
 
 
                     if not self.night and self.generate_timelapse_flag:
+                        self._expireData(self.camera_id)  # cleanup old images and folders
+
                         ### Generate timelapse at end of day
                         yesterday_ref = dayDate - timedelta(days=1)
                         timespec = yesterday_ref.strftime('%Y%m%d')
@@ -310,6 +317,8 @@ class CaptureWorker(Process):
                         self._expireData(self.camera_id)  # cleanup old images and folders
 
                     elif self.night and self.generate_timelapse_flag:
+                        self._expireData(self.camera_id)  # cleanup old images and folders
+
                         ### Generate timelapse at end of night
                         yesterday_ref = dayDate - timedelta(days=1)
                         timespec = yesterday_ref.strftime('%Y%m%d')
@@ -334,7 +343,7 @@ class CaptureWorker(Process):
                 #)
 
 
-                self.getSensorTemperature()
+                self.getCcdTemperature()
                 self.getTelescopeRaDec()
                 self.getGpsPosition()
 
@@ -594,12 +603,6 @@ class CaptureWorker(Process):
 
         self.indiclient.findTelescope(telescope_name='Telescope Simulator')
         self.indiclient.findGps()
-
-
-        # this is only needed for libcamera
-        libcamera_image_type = self.config.get('LIBCAMERA', {}).get('IMAGE_FILE_TYPE', 'dng')
-        if libcamera_image_type != 'dng':
-            self.indiclient.libcamera_bit_depth = 8
 
 
         logger.warning('Connecting to CCD device %s', self.indiclient.ccd_device.getDeviceName())
@@ -1015,7 +1018,7 @@ class CaptureWorker(Process):
                 self.indiclient.configureCcdDevice(self.indi_config)
 
 
-    def getSensorTemperature(self):
+    def getCcdTemperature(self):
         temp_c = self.indiclient.getCcdTemperature()
 
 
@@ -1249,6 +1252,14 @@ class CaptureWorker(Process):
                 logger.warning('Change to night (normal mode)')
                 self.indiclient.setCcdGain(self.config['CCD_CONFIG']['NIGHT']['GAIN'])
                 self.indiclient.setCcdBinning(self.config['CCD_CONFIG']['NIGHT']['BINNING'])
+
+
+            if self.config['CAMERA_INTERFACE'].startswith('libcamera'):
+                libcamera_image_type = self.config.get('LIBCAMERA', {}).get('IMAGE_FILE_TYPE', 'dng')
+                if libcamera_image_type == 'dng':
+                    self.indiclient.libcamera_bit_depth = 16
+                else:
+                    self.indiclient.libcamera_bit_depth = 8
         else:
             logger.warning('Change to day')
 
@@ -1260,6 +1271,14 @@ class CaptureWorker(Process):
             self.indiclient.disableCcdCooler()
             self.indiclient.setCcdGain(self.config['CCD_CONFIG']['DAY']['GAIN'])
             self.indiclient.setCcdBinning(self.config['CCD_CONFIG']['DAY']['BINNING'])
+
+
+            if self.config['CAMERA_INTERFACE'].startswith('libcamera'):
+                libcamera_image_type = self.config.get('LIBCAMERA', {}).get('IMAGE_FILE_TYPE_DAY', 'dng')
+                if libcamera_image_type == 'dng':
+                    self.indiclient.libcamera_bit_depth = 16
+                else:
+                    self.indiclient.libcamera_bit_depth = 8
 
 
         # update CCD config

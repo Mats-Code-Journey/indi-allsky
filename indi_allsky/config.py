@@ -161,7 +161,7 @@ class IndiAllSkyConfigBase(object):
             "tif"   : 5,  # 5 = LZW
         },
         "IMAGE_FOLDER"     : "/var/www/html/allsky/images",
-        "IMAGE_LABEL_TEMPLATE": "# size:30 [Use 60 for higher resolution cameras]\n# xy:-15,15 (Upper Right)\n# anchor:ra (Right Justified)\n# color:150,0,0\n{timestamp:%Y.%m.%d %H:%M:%S}\n# color:100,100,0\nLat {latitude:0.0f} Long {longitude:0.0f}\n# color:150,150,150\nTiangong {tiangong_up:s} [{tiangong_next_h:0.1f}h/{tiangong_next_alt:0.0f}\u00b0]\nHubble {hst_up:s} [{hst_next_h:0.1f}h/{hst_next_alt:0.0f}\u00b0]\nISS {iss_up:s} [{iss_next_h:0.1f}h/{iss_next_alt:0.0f}\u00b0]\n# xy:-15,-240 (Lower Right) [Use -15,-450 for size 60]\n# color:175,175,0\nSun {sun_alt:0.0f}\u00b0\n# color:125,0,0\nMercury {mercury_alt:0.0f}\u00b0\n# color:100,150,150\nVenus {venus_alt:0.0f}\u00b0\n# color:150,0,0\nMars {mars_alt:0.0f}\u00b0\n# color:100,100,0\nJupiter {jupiter_alt:0.0f}\u00b0\n# color:100,100,150\nSaturn {saturn_alt:0.0f}\u00b0\n# color:150,150,150\nMoon {moon_phase:0.0f}% {moon_alt:0.0f}\u00b0\n# xy:15,-120 (Lower Left)  [Use 15,-210 for size 60]\n# anchor:la (Left Justified)\n# color:0,150,150\nStars {stars:d}\n# color:150,50,50\nKp-index {kpindex:0.2f}\n# color:150,150,150\nSmoke {smoke_rating:s}\n# xy:15,15 (Upper Left)\n# color:0,150,0\nExposure {exposure:0.6f}\n# color:150,50,0\nGain {gain:d}\n# color:50,50,150\nTemp {temp:0.1f}\u00b0{temp_unit:s}\n# color:150,0,150\nStretch {stretch:s}\nStacking {stack_method:s}\n# color:200,200,200 (default color)\n# additional labels will be added here",
+        "IMAGE_LABEL_TEMPLATE": "# size:30 [Use 60 for higher resolution cameras]\n# xy:-15,15 (Upper Right)\n# anchor:ra (Right Justified)\n# color:150,0,0\n{timestamp:%Y.%m.%d %H:%M:%S}\n# color:100,100,0\nLat {latitude:0.0f} Long {longitude:0.0f}\n# color:150,150,150\nTiangong {tiangong_up:s} [{tiangong_next_h:0.1f}h/{tiangong_next_alt:0.0f}\u00b0]\nHubble {hst_up:s} [{hst_next_h:0.1f}h/{hst_next_alt:0.0f}\u00b0]\nISS {iss_up:s} [{iss_next_h:0.1f}h/{iss_next_alt:0.0f}\u00b0]\n# xy:-15,-240 (Lower Right) [Use -15,-450 for size 60]\n# color:175,175,0\nSun {sun_alt:0.0f}\u00b0\n# color:125,0,0\nMercury {mercury_alt:0.0f}\u00b0\n# color:100,150,150\nVenus {venus_alt:0.0f}\u00b0\n# color:150,0,0\nMars {mars_alt:0.0f}\u00b0\n# color:100,100,0\nJupiter {jupiter_alt:0.0f}\u00b0\n# color:100,100,150\nSaturn {saturn_alt:0.0f}\u00b0\n# color:150,150,150\nMoon {moon_phase:0.0f}% {moon_alt:0.0f}\u00b0\n# xy:15,-120 (Lower Left)  [Use 15,-210 for size 60]\n# anchor:la (Left Justified)\n# color:0,150,150\nStars {stars:d}\n# color:150,50,50\nKp-index {kpindex:0.2f}\n# color:150,150,150\nSmoke {smoke_rating:s}\n# xy:15,15 (Upper Left)\n# color:0,150,0\nExposure {exposure:0.6f}\n# color:150,50,0\nGain {gain:d}\n# color:50,50,150\nCamera {temp:0.1f}\u00b0{temp_unit:s}\n# color:150,0,150\nStretch {stretch:s}\nStacking {stack_method:s}\n# color:200,200,200 (default color)\n# additional labels will be added here",
         "URL_TEMPLATE": "https://{bucket}.s3.{region}.{host}",
         "IMAGE_EXTRA_TEXT" : "",
         "IMAGE_CROP_ROI"   : [],
@@ -377,6 +377,7 @@ class IndiAllSkyConfigBase(object):
         },
         "LIBCAMERA" : {
             "IMAGE_FILE_TYPE"        : "dng",
+            "IMAGE_FILE_TYPE_DAY"    : "dng",
             "AWB"                    : "auto",
             "AWB_DAY"                : "auto",
             "AWB_ENABLE"             : False,
@@ -454,6 +455,8 @@ class IndiAllSkyConfigBase(object):
             "C_I2C_ADDRESS"          : "0x40",
             "OPENWEATHERMAP_APIKEY"  : "",
             "OPENWEATHERMAP_APIKEY_E": "",
+            "WUNDERGROUND_APIKEY"    : "",
+            "WUNDERGROUND_APIKEY_E"  : "",
             "MQTT_TRANSPORT"         : "tcp",  # tcp or websockets
             "MQTT_HOST"              : "localhost",
             "MQTT_PORT"              : 8883,  # 1883 = mqtt, 8883 = TLS
@@ -470,6 +473,10 @@ class IndiAllSkyConfigBase(object):
             "TSL2591_GAIN_DAY"       : "GAIN_LOW",
             "TSL2591_INT_NIGHT"      : "INTEGRATIONTIME_100MS",
             "TSL2591_INT_DAY"        : "INTEGRATIONTIME_100MS",
+            "VEML7700_GAIN_NIGHT"    : "ALS_GAIN_1",
+            "VEML7700_GAIN_DAY"      : "ALS_GAIN_1_8",
+            "VEML7700_INT_NIGHT"     : "ALS_100MS",
+            "VEML7700_INT_DAY"       : "ALS_100MS",
         },
         "CHARTS" : {
             "CUSTOM_SLOT_1"          : 10,
@@ -624,12 +631,21 @@ class IndiAllSkyConfig(IndiAllSkyConfigBase):
             else:
                 pycurl_camera__password = config.get('PYCURL_CAMERA', {}).get('PASSWORD', '')
 
+
             temp_sensor__openweathermap_apikey_e = config.get('TEMP_SENSOR', {}).get('OPENWEATHERMAP_APIKEY_E', '')
             if temp_sensor__openweathermap_apikey_e:
                 # not catching InvalidToken
                 temp_sensor__openweathermap_apikey = f_key.decrypt(temp_sensor__openweathermap_apikey_e.encode()).decode()
             else:
                 temp_sensor__openweathermap_apikey = config.get('TEMP_SENSOR', {}).get('OPENWEATHERMAP_APIKEY', '')
+
+
+            temp_sensor__wunderground_apikey_e = config.get('TEMP_SENSOR', {}).get('WUNDERGROUND_APIKEY_E', '')
+            if temp_sensor__wunderground_apikey_e:
+                # not catching InvalidToken
+                temp_sensor__wunderground_apikey = f_key.decrypt(temp_sensor__wunderground_apikey_e.encode()).decode()
+            else:
+                temp_sensor__wunderground_apikey = config.get('TEMP_SENSOR', {}).get('WUNDERGROUND_APIKEY', '')
 
 
             temp_sensor__mqtt_password_e = config.get('TEMP_SENSOR', {}).get('MQTT_PASSWORD_E', '')
@@ -647,6 +663,7 @@ class IndiAllSkyConfig(IndiAllSkyConfigBase):
             syncapi__apikey = config.get('SYNCAPI', {}).get('APIKEY', '')
             pycurl_camera__password = config.get('PYCURL_CAMERA', {}).get('PASSWORD', '')
             temp_sensor__openweathermap_apikey = config.get('TEMP_SENSOR', {}).get('OPENWEATHERMAP_APIKEY', '')
+            temp_sensor__wunderground_apikey = config.get('TEMP_SENSOR', {}).get('WUNDERGROUND_APIKEY', '')
             temp_sensor__mqtt_password = config.get('TEMP_SENSOR', {}).get('MQTT_PASSWORD', '')
 
 
@@ -662,6 +679,8 @@ class IndiAllSkyConfig(IndiAllSkyConfigBase):
         config['PYCURL_CAMERA']['PASSWORD_E'] = ''
         config['TEMP_SENSOR']['OPENWEATHERMAP_APIKEY'] = temp_sensor__openweathermap_apikey
         config['TEMP_SENSOR']['OPENWEATHERMAP_APIKEY_E'] = ''
+        config['TEMP_SENSOR']['WUNDERGROUND_APIKEY'] = temp_sensor__wunderground_apikey
+        config['TEMP_SENSOR']['WUNDERGROUND_APIKEY_E'] = ''
         config['TEMP_SENSOR']['MQTT_PASSWORD'] = temp_sensor__mqtt_password
         config['TEMP_SENSOR']['MQTT_PASSWORD_E'] = ''
 
@@ -745,6 +764,15 @@ class IndiAllSkyConfig(IndiAllSkyConfigBase):
                 temp_sensor__openweathermap_apikey = ''
 
 
+            temp_sensor__wunderground_apikey = str(config['TEMP_SENSOR']['WUNDERGROUND_APIKEY'])
+            if temp_sensor__wunderground_apikey:
+                temp_sensor__wunderground_apikey_e = f_key.encrypt(temp_sensor__wunderground_apikey.encode()).decode()
+                temp_sensor__wunderground_apikey = ''
+            else:
+                temp_sensor__wunderground_apikey_e = ''
+                temp_sensor__wunderground_apikey = ''
+
+
             temp_sensor__mqtt_password = str(config['TEMP_SENSOR']['MQTT_PASSWORD'])
             if temp_sensor__mqtt_password:
                 temp_sensor__mqtt_password_e = f_key.encrypt(temp_sensor__mqtt_password.encode()).decode()
@@ -769,6 +797,8 @@ class IndiAllSkyConfig(IndiAllSkyConfigBase):
             pycurl_camera__password_e = ''
             temp_sensor__openweathermap_apikey = str(config['TEMP_SENSOR']['OPENWEATHERMAP_APIKEY'])
             temp_sensor__openweathermap_apikey_e = ''
+            temp_sensor__wunderground_apikey = str(config['TEMP_SENSOR']['WUNDERGROUND_APIKEY'])
+            temp_sensor__wunderground_apikey_e = ''
             temp_sensor__mqtt_password = str(config['TEMP_SENSOR']['MQTT_PASSWORD'])
             temp_sensor__mqtt_password_e = ''
 
@@ -785,6 +815,8 @@ class IndiAllSkyConfig(IndiAllSkyConfigBase):
         config['PYCURL_CAMERA']['PASSWORD_E'] = pycurl_camera__password_e
         config['TEMP_SENSOR']['OPENWEATHERMAP_APIKEY'] = temp_sensor__openweathermap_apikey
         config['TEMP_SENSOR']['OPENWEATHERMAP_APIKEY_E'] = temp_sensor__openweathermap_apikey_e
+        config['TEMP_SENSOR']['WUNDERGROUND_APIKEY'] = temp_sensor__wunderground_apikey
+        config['TEMP_SENSOR']['WUNDERGROUND_APIKEY_E'] = temp_sensor__wunderground_apikey_e
         config['TEMP_SENSOR']['MQTT_PASSWORD'] = temp_sensor__mqtt_password
         config['TEMP_SENSOR']['MQTT_PASSWORD_E'] = temp_sensor__mqtt_password_e
 

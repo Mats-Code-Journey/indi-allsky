@@ -643,6 +643,9 @@ def IMAGE_LABEL_TEMPLATE_validator(form, field):
     for x in range(30):
         # temperature sensors
         test_data['sensor_temp_{0:d}'.format(x)] = 0.0
+        test_data['sensor_temp_{0:d}_f'.format(x)] = 0.0
+        test_data['sensor_temp_{0:d}_c'.format(x)] = 0.0
+        test_data['sensor_temp_{0:d}_k'.format(x)] = 0.0
 
     for x in range(30):
         # other sensors
@@ -2234,6 +2237,10 @@ def TEMP_SENSOR__OPENWEATHERMAP_APIKEY_validator(form, field):
     pass
 
 
+def TEMP_SENSOR__WUNDERGROUND_APIKEY_validator(form, field):
+    pass
+
+
 def SENSOR_SLOT_validator(form, field):
     try:
         slot_i = int(field.data)
@@ -2303,6 +2310,16 @@ def TEMP_SENSOR__TSL2591_GAIN_validator(form, field):
 
 def TEMP_SENSOR__TSL2591_INT_validator(form, field):
     if field.data not in list(zip(*form.TEMP_SENSOR__TSL2591_INT_choices))[0]:
+        raise ValidationError('Invalid integration selection')
+
+
+def TEMP_SENSOR__VEML7700_GAIN_validator(form, field):
+    if field.data not in list(zip(*form.TEMP_SENSOR__VEML7700_GAIN_choices))[0]:
+        raise ValidationError('Invalid gain selection')
+
+
+def TEMP_SENSOR__VEML7700_INT_validator(form, field):
+    if field.data not in list(zip(*form.TEMP_SENSOR__VEML7700_INT_choices))[0]:
         raise ValidationError('Invalid integration selection')
 
 
@@ -2655,17 +2672,20 @@ class IndiAllskyConfigForm(FlaskForm):
     TEMP_SENSOR__CLASSNAME_choices = (
         ('', 'None'),
         ('temp_api_openweathermap', 'OpenWeather API (9)'),
+        ('temp_api_weatherunderground', 'Weather Underground API (8)'),
         ('kernel_temp_sensor_ds18x20_w1', 'DS18x20 - Temp (1)'),
         ('blinka_temp_sensor_dht22', 'DHT22/AM2302 - Temp/RH (2)'),
         ('blinka_temp_sensor_dht21', 'DHT21/AM2301 - Temp/RH (2)'),
         ('blinka_temp_sensor_dht11', 'DHT11 - Temp/RH (2)'),
         ('blinka_temp_sensor_bmp180_i2c', 'BMP180 i2c - Temp/Pres (2)'),
-        ('blinka_temp_sensor_bme280_i2c', 'BME280 i2c - Temp/RH/Pres (3)'),
-        ('blinka_temp_sensor_bme280_spi', 'BME280 SPI - Temp/RH/Pres (3)'),
+        ('blinka_temp_sensor_bme280_i2c', 'BMP/BME280 i2c - Temp/RH/Pres (3)'),
+        ('blinka_temp_sensor_bme280_spi', 'BMP/BME280 SPI - Temp/RH/Pres (3)'),
         ('blinka_temp_sensor_bme680_i2c', 'BME680 i2c - Temp/RH/Pres/Gas (4)'),
         ('blinka_temp_sensor_bme680_spi', 'BME680 SPI - Temp/RH/Pres/Gas (4)'),
         ('blinka_temp_sensor_si7021_i2c', 'Si7021 i2c - Temp/RH (2)'),
+        ('blinka_temp_sensor_sht3x_i2c', 'SHT3x i2c - Temp/RH (2)'),
         ('blinka_temp_sensor_sht4x_i2c', 'SHT40/41/45 i2c - Temp/RH (2)'),
+        ('blinka_temp_sensor_ahtx0_i2c', 'AHT10/20 i2c - Temp/RH (2)'),
         ('cpads_temp_sensor_tmp36_ads1015_i2c', 'TMP36 ADS1015 i2c - Temp (1)'),
         ('cpads_temp_sensor_tmp36_ads1115_i2c', 'TMP36 ADS1115 i2c - Temp (1)'),
         ('cpads_temp_sensor_lm35_ads1015_i2c', 'LM35 ADS1015 i2c - Temp (1)'),
@@ -2673,7 +2693,9 @@ class IndiAllskyConfigForm(FlaskForm):
         ('blinka_temp_sensor_mlx90614_i2c', 'MLX90614 i2c - Temp/SkyTemp (2)'),
         ('blinka_light_sensor_tsl2561_i2c', 'TSL2561 i2c - Lux/Full/IR (3)'),
         ('blinka_light_sensor_tsl2591_i2c', 'TSL2591 i2c - Lux/Vis/IR/Full (4)'),
-        ('blinka_light_sensor_bh1750_i2c', 'BH1750 (GY-30) i2c - Lux (1)'),
+        ('blinka_light_sensor_veml7700_i2c', 'VEML7700 i2c - Lux/Light/White (3)'),
+        ('blinka_light_sensor_bh1750_i2c', 'BH1750 i2c - Lux (1)'),
+        ('blinka_light_sensor_si1145_i2c', 'SI1145 i2c - Vis/IR/UV (3)'),
         ('mqtt_broker_sensor', 'MQTT Broker Sensor - (5)'),
         ('sensor_data_generator', 'Test Data Generator - (4)'),
     )
@@ -2757,33 +2779,50 @@ class IndiAllskyConfigForm(FlaskForm):
 
 
     TEMP_SENSOR__TSL2561_GAIN_choices = (
-        ('0', 'Low (1x)'),
-        ('1', 'High (16x)'),
+        ('0', '[0] Low - 1x'),
+        ('1', '[1] High - 16x'),
     )
 
 
     TEMP_SENSOR__TSL2561_INT_choices = (
-        ('0', '13.7ms'),
-        ('1', '101ms (default)'),
-        ('2', '402ms'),
+        ('0', '[0] 13.7ms'),
+        ('1', '[1] 101ms (default)'),
+        ('2', '[2] 402ms '),
     )
 
 
     TEMP_SENSOR__TSL2591_GAIN_choices = (
-        ('GAIN_LOW', 'Low (1x)'),
-        ('GAIN_MED', 'Medium (25x) (default)'),
-        ('GAIN_HIGH', 'High (428x)'),
-        ('GAIN_MAX', 'Maximum (9876x)'),
+        ('GAIN_LOW', '[0] Low - 1x'),
+        ('GAIN_MED', '[16] Medium - 25x (default)'),
+        ('GAIN_HIGH', '[32] High - 428x'),
+        ('GAIN_MAX', '[48] Maximum - 9876x'),
     )
 
 
     TEMP_SENSOR__TSL2591_INT_choices = (
-        ('INTEGRATIONTIME_100MS', '100ms (default)'),
-        ('INTEGRATIONTIME_200MS', '200ms'),
-        ('INTEGRATIONTIME_300MS', '300ms'),
-        ('INTEGRATIONTIME_400MS', '400ms'),
-        ('INTEGRATIONTIME_500MS', '500ms'),
-        ('INTEGRATIONTIME_600MS', '600ms'),
+        ('INTEGRATIONTIME_100MS', '[0] 100ms (default)'),
+        ('INTEGRATIONTIME_200MS', '[1] 200ms'),
+        ('INTEGRATIONTIME_300MS', '[2] 300ms'),
+        ('INTEGRATIONTIME_400MS', '[3] 400ms'),
+        ('INTEGRATIONTIME_500MS', '[4] 500ms'),
+        ('INTEGRATIONTIME_600MS', '[5] 600ms'),
+    )
+
+
+    TEMP_SENSOR__VEML7700_GAIN_choices = (
+        ('ALS_GAIN_1_8', '[2] Low - 1/8x'),
+        ('ALS_GAIN_1_4', '[3] Medium - 1/4x'),
+        ('ALS_GAIN_1', '[0] High - 1x'),
+        ('ALS_GAIN_2', '[1] Maximum - 2x'),
+    )
+
+    TEMP_SENSOR__VEML7700_INT_choices = (
+        ('ALS_25MS', '[12] 25ms)'),
+        ('ALS_50MS', '[8] 50ms)'),
+        ('ALS_100MS', '[0] 100ms (default)'),
+        ('ALS_200MS', '[1] 200ms'),
+        ('ALS_400MS', '[2] 400ms'),
+        ('ALS_800MS', '[3] 800ms)'),
     )
 
 
@@ -3093,7 +3132,8 @@ class IndiAllskyConfigForm(FlaskForm):
     FITSHEADERS__3__VAL              = StringField('FITS Header 4 Value', validators=[])
     FITSHEADERS__4__KEY              = StringField('FITS Header 5', validators=[DataRequired(), FITSHEADER_KEY_validator])
     FITSHEADERS__4__VAL              = StringField('FITS Header 5 Value', validators=[])
-    LIBCAMERA__IMAGE_FILE_TYPE       = SelectField('libcamera image type', choices=LIBCAMERA__IMAGE_FILE_TYPE_choices, validators=[DataRequired(), LIBCAMERA__IMAGE_FILE_TYPE_validator])
+    LIBCAMERA__IMAGE_FILE_TYPE       = SelectField('Night libcamera image type', choices=LIBCAMERA__IMAGE_FILE_TYPE_choices, validators=[DataRequired(), LIBCAMERA__IMAGE_FILE_TYPE_validator])
+    LIBCAMERA__IMAGE_FILE_TYPE_DAY   = SelectField('Day libcamera image type', choices=LIBCAMERA__IMAGE_FILE_TYPE_choices, validators=[DataRequired(), LIBCAMERA__IMAGE_FILE_TYPE_validator])
     LIBCAMERA__AWB                   = SelectField('Night AWB', choices=LIBCAMERA__AWB_choices, validators=[DataRequired(), LIBCAMERA__AWB_validator])
     LIBCAMERA__AWB_DAY               = SelectField('Day AWB', choices=LIBCAMERA__AWB_choices, validators=[DataRequired(), LIBCAMERA__AWB_validator])
     LIBCAMERA__AWB_ENABLE            = BooleanField('Night Enable AWB')
@@ -3156,7 +3196,8 @@ class IndiAllskyConfigForm(FlaskForm):
     TEMP_SENSOR__C_PIN_1             = StringField('Pin/Port', validators=[DEVICE_PIN_NAME_validator])
     TEMP_SENSOR__C_USER_VAR_SLOT     = SelectField('Sensor C Slot', choices=SENSOR_USER_VAR_SLOT_choices, validators=[SENSOR_USER_VAR_SLOT_validator])
     TEMP_SENSOR__C_I2C_ADDRESS       = StringField('I2C Address', validators=[DataRequired(), TEMP_SENSOR__I2C_ADDRESS_validator])
-    TEMP_SENSOR__OPENWEATHERMAP_APIKEY = PasswordField('OpenWeatherMap Api Key', widget=PasswordInput(hide_value=False), validators=[TEMP_SENSOR__OPENWEATHERMAP_APIKEY_validator], render_kw={'autocomplete' : 'new-password'})
+    TEMP_SENSOR__OPENWEATHERMAP_APIKEY = PasswordField('OpenWeatherMap API Key', widget=PasswordInput(hide_value=False), validators=[TEMP_SENSOR__OPENWEATHERMAP_APIKEY_validator], render_kw={'autocomplete' : 'new-password'})
+    TEMP_SENSOR__WUNDERGROUND_APIKEY = PasswordField('Weather Underground API Key', widget=PasswordInput(hide_value=False), validators=[TEMP_SENSOR__WUNDERGROUND_APIKEY_validator], render_kw={'autocomplete' : 'new-password'})
     TEMP_SENSOR__MQTT_TRANSPORT      = SelectField('MQTT Transport', choices=MQTTPUBLISH__TRANSPORT_choices, validators=[DataRequired(), MQTTPUBLISH__TRANSPORT_validator])
     TEMP_SENSOR__MQTT_HOST           = StringField('MQTT Host', validators=[MQTTPUBLISH__HOST_validator])
     TEMP_SENSOR__MQTT_PORT           = IntegerField('Port', validators=[DataRequired(), MQTTPUBLISH__PORT_validator])
@@ -3172,6 +3213,10 @@ class IndiAllskyConfigForm(FlaskForm):
     TEMP_SENSOR__TSL2591_GAIN_DAY    = SelectField('TSL2591 Gain (Day)', choices=TEMP_SENSOR__TSL2591_GAIN_choices, validators=[TEMP_SENSOR__TSL2591_GAIN_validator])
     TEMP_SENSOR__TSL2591_INT_NIGHT   = SelectField('TSL2591 Integration (Night)', choices=TEMP_SENSOR__TSL2591_INT_choices, validators=[TEMP_SENSOR__TSL2591_INT_validator])
     TEMP_SENSOR__TSL2591_INT_DAY     = SelectField('TSL2591 Integration (Day)', choices=TEMP_SENSOR__TSL2591_INT_choices, validators=[TEMP_SENSOR__TSL2591_INT_validator])
+    TEMP_SENSOR__VEML7700_GAIN_NIGHT = SelectField('VEML7700 Gain (Night)', choices=TEMP_SENSOR__VEML7700_GAIN_choices, validators=[TEMP_SENSOR__VEML7700_GAIN_validator])
+    TEMP_SENSOR__VEML7700_GAIN_DAY   = SelectField('VEML7700 Gain (Day)', choices=TEMP_SENSOR__VEML7700_GAIN_choices, validators=[TEMP_SENSOR__VEML7700_GAIN_validator])
+    TEMP_SENSOR__VEML7700_INT_NIGHT  = SelectField('VEML7700 Integration (Night)', choices=TEMP_SENSOR__VEML7700_INT_choices, validators=[TEMP_SENSOR__VEML7700_INT_validator])
+    TEMP_SENSOR__VEML7700_INT_DAY    = SelectField('VEML7700 Integration (Day)', choices=TEMP_SENSOR__VEML7700_INT_choices, validators=[TEMP_SENSOR__VEML7700_INT_validator])
     CHARTS__CUSTOM_SLOT_1            = SelectField('Extra Chart Slot 1', choices=[], validators=[SENSOR_SLOT_validator])
     CHARTS__CUSTOM_SLOT_2            = SelectField('Extra Chart Slot 2', choices=[], validators=[SENSOR_SLOT_validator])
     CHARTS__CUSTOM_SLOT_3            = SelectField('Extra Chart Slot 3', choices=[], validators=[SENSOR_SLOT_validator])
@@ -3956,13 +4001,16 @@ class IndiAllskyGalleryViewer(FlaskForm):
             createDate_year,
         )\
             .join(IndiAllSkyDbImageTable.camera)\
-            .join(IndiAllSkyDbThumbnailTable, IndiAllSkyDbImageTable.thumbnail_uuid == IndiAllSkyDbThumbnailTable.uuid)\
             .filter(
                 and_(
                     IndiAllSkyDbCameraTable.id == self.camera_id,
                     IndiAllSkyDbImageTable.detections >= self.detections_count,
                 )
         )
+
+
+        ### Disable this join to make things faster
+        #    .join(IndiAllSkyDbThumbnailTable, IndiAllSkyDbImageTable.thumbnail_uuid == IndiAllSkyDbThumbnailTable.uuid)\
 
 
         if not self.local:
@@ -5335,6 +5383,7 @@ class IndiAllskyCameraSimulatorForm(FlaskForm):
             ('m12_f2.0_1.8mm_1-2.5', 'M12 1.8mm ƒ/2.0 - 180° - 1/2.5" ∅6.9mm'),
         ),
         'Large' : (
+            ('vm2.8ir10mp_f1.6_2.8mm_1-1.8', 'VM2.8IR10MP 2.8mm ƒ/1.6 Fisheye - ∅9.0mm'),
             ('meike_f2.8_3.5mm_4-3', 'Meike 3.5mm ƒ/2.8 Fisheye - 220° - 4/3" ∅12.5mm'),
             ('custom_f7_5.8mm_m42', 'Custom 5.8mm ƒ/7 - 174° - ∅17.3mm'),
         ),
